@@ -123,13 +123,18 @@ html, body {
   pointer-events: auto;
 }
 
-/* ── Sidebar drawer (mobile) ─────────────────────────────────── */
-.sidebar-drawer {
-  transform: translateX(-100%);
-  transition: transform var(--duration-slow) var(--ease-out);
-}
-.sidebar-drawer.open {
-  transform: translateX(0);
+/* ── Sidebar drawer (mobile only — must not apply at md+) ────── */
+/* The media query is required: unlayered rules in this file win over
+   Tailwind's md:transform-none utility on specificity-tie, which would
+   otherwise leave the sidebar translated off-screen on desktop. */
+@media (max-width: 767px) {
+  .sidebar-drawer {
+    transform: translateX(-100%);
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+  .sidebar-drawer.open {
+    transform: translateX(0);
+  }
 }
 
 /* ── Reduce motion ───────────────────────────────────────────── */
