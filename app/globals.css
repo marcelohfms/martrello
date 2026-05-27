@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-mt-bg: #0d1b2a;
+  --color-mt-list: #1b2a3a;
+  --color-mt-card: #22344a;
+  --color-mt-line: #2c3e54;
+  --color-mt-text: #e2e8f0;
+  --color-mt-muted: #94a3b8;
+  --color-mt-accent: #3b82f6;
+
+  --color-mt-sprint-bg: #150d22;
+  --color-mt-sprint-list: #221833;
+  --color-mt-sprint-card: #2c2042;
+  --color-mt-sprint-line: #3a2c54;
+  --color-mt-sprint-accent: #a855f7;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html, body {
+  background: var(--color-mt-bg);
+  color: var(--color-mt-text);
+  font-family: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-mt-line); border-radius: 4px; }
