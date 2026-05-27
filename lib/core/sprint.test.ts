@@ -130,6 +130,9 @@ describe('sprint', () => {
   it('lists sprints in reverse chronological order', async () => {
     const s1 = await startSprint(db);
     await closeSprint(db, { carryIncomplete: false });
+    // Ensure s2 gets a strictly later started_at than s1 (avoids the
+    // ulid-tiebreaker fallback when both fall in the same millisecond).
+    await new Promise((resolve) => setTimeout(resolve, 2));
     const s2 = await startSprint(db);
     const all = await listSprints(db);
     expect(all.map((s) => s.id)).toEqual([s2.id, s1.id]);
