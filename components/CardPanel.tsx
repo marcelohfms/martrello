@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { updateCardAction, toggleLabelAction, archiveCardAction, addToSprintAction, removeFromSprintAction } from '@/app/actions';
+import { DeadlinePicker } from './DeadlinePicker';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -35,13 +36,6 @@ export function CardPanel({ cardId, onClose }: Props) {
     start(async () => {
       await updateCardAction(card.id, { description: descDraft });
       setEditingDesc(false);
-      mutate();
-    });
-  }
-
-  function saveDue(input: string) {
-    start(async () => {
-      await updateCardAction(card.id, { dueDate: input || null });
       mutate();
     });
   }
@@ -92,12 +86,14 @@ export function CardPanel({ cardId, onClose }: Props) {
 
         <section>
           <div className="text-xs text-[var(--color-mt-muted)] mb-1">Prazo</div>
-          <input
-            type="text"
-            defaultValue={card.dueDate ?? ''}
-            placeholder="2026-06-15 ou amanhã / sex / +3d"
-            onBlur={(e) => saveDue(e.target.value)}
-            className="w-full bg-[var(--color-mt-card)] p-2 rounded text-xs"
+          <DeadlinePicker
+            value={card.dueDate}
+            onChange={(next) =>
+              start(async () => {
+                await updateCardAction(card.id, { dueDate: next });
+                mutate();
+              })
+            }
           />
         </section>
 
