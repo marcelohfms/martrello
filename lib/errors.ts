@@ -13,19 +13,22 @@ export type ErrorCode =
   | 'INVALID_INPUT';
 
 export class MartrelloError extends Error {
+  public readonly originalMessage: string;
+
   constructor(
     public code: ErrorCode,
     message: string,
     public suggestions?: string[],
   ) {
-    super(message);
+    super(`${code}: ${message}`);
     this.name = 'MartrelloError';
+    this.originalMessage = message;
   }
 
   toJSON() {
     const base: { error: ErrorCode; message: string; suggestions?: string[] } = {
       error: this.code,
-      message: this.message,
+      message: this.originalMessage,
     };
     if (this.suggestions && this.suggestions.length > 0) base.suggestions = this.suggestions;
     return base;

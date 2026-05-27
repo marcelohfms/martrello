@@ -26,7 +26,7 @@ export function parseDate(input: string, now: Date = new Date()): string {
 
   if (ISO.test(s)) {
     const d = parseISO(s);
-    if (!isValid(d)) throw new MartrelloError('INVALID_DATE', `INVALID_DATE: Data ISO inválida: ${input}`);
+    if (!isValid(d)) throw new MartrelloError('INVALID_DATE', `Data ISO inválida: ${input}`);
     return s;
   }
 
@@ -57,5 +57,5 @@ export function parseDate(input: string, now: Date = new Date()): string {
     return fmt(daquiMatch[2].startsWith('dia') ? addDays(now, n) : addWeeks(now, n));
   }
 
-  throw new MartrelloError('INVALID_DATE', `INVALID_DATE: Não consegui parsear data: ${input}`);
+  throw new MartrelloError('INVALID_DATE', `Não consegui parsear data: ${input}`);
 }
