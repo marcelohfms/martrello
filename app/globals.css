@@ -172,3 +172,30 @@ html, body {
 .drop-ring {
   animation: ring-pulse 1.2s ease infinite;
 }
+
+/* ── react-day-picker dark theme overrides ──────────────────── */
+.rdp-root {
+  --rdp-accent-color: var(--color-mt-accent);
+  --rdp-background-color: var(--color-mt-card);
+  --rdp-day-disabled-color: var(--color-mt-muted);
+  --rdp-day-selected-color: white;
+  color: var(--color-mt-text);
+  font-size: 12px;
+}
+.rdp-month_caption { color: var(--color-mt-text); font-weight: 600; }
+.rdp-weekday { color: var(--color-mt-muted); font-weight: 500; text-transform: lowercase; }
+.rdp-day { color: var(--color-mt-text); }
+.rdp-day_button:hover:not([disabled]) { background: var(--color-mt-line); }
+.rdp-selected .rdp-day_button {
+  background: var(--color-mt-accent);
+  color: white;
+}
+.rdp-today:not(.rdp-selected) .rdp-day_button {
+  border: 1px solid var(--color-mt-accent);
+}
+.rdp-outside { opacity: 0.4; }
+.rdp-nav button {
+  color: var(--color-mt-text);
+  background: transparent;
+}
+.rdp-nav button:hover { background: var(--color-mt-line); }
