@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-mt-bg: #0d1b2a;
+  --color-mt-list: #1b2a3a;
+  --color-mt-card: #22344a;
+  --color-mt-line: #2c3e54;
+  --color-mt-text: #e2e8f0;
+  --color-mt-muted: #94a3b8;
+  --color-mt-accent: #3b82f6;
+
+  --color-mt-sprint-bg: #150d22;
+  --color-mt-sprint-list: #221833;
+  --color-mt-sprint-card: #2c2042;
+  --color-mt-sprint-line: #3a2c54;
+  --color-mt-sprint-accent: #a855f7;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html, body {
+  background: var(--color-mt-bg);
+  color: var(--color-mt-text);
+  font-family: var(--font-sans);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--color-mt-line); border-radius: 4px; }
