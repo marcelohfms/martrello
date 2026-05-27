@@ -1,28 +1,174 @@
 @import "tailwindcss";
 
 @theme {
-  --color-mt-bg: #0d1b2a;
-  --color-mt-list: #1b2a3a;
-  --color-mt-card: #22344a;
-  --color-mt-line: #2c3e54;
-  --color-mt-text: #e2e8f0;
-  --color-mt-muted: #94a3b8;
-  --color-mt-accent: #3b82f6;
+  /* ── Project palette ─────────────────────────────────────────── */
+  --color-mt-bg:        #0d1b2a;
+  --color-mt-list:      #1b2a3a;
+  --color-mt-card:      #22344a;
+  --color-mt-card-hover:#273e57;
+  --color-mt-line:      #2c3e54;
+  --color-mt-line-subtle:#1e2f42;
+  --color-mt-text:      #e2e8f0;
+  --color-mt-text-secondary: #cbd5e1;
+  --color-mt-muted:     #64748b;
+  --color-mt-muted-hi:  #94a3b8;
+  --color-mt-accent:    #3b82f6;
+  --color-mt-accent-hi: #60a5fa;
+  --color-mt-accent-dim:#1d4ed8;
 
-  --color-mt-sprint-bg: #150d22;
-  --color-mt-sprint-list: #221833;
-  --color-mt-sprint-card: #2c2042;
-  --color-mt-sprint-line: #3a2c54;
+  /* ── Sprint palette ──────────────────────────────────────────── */
+  --color-mt-sprint-bg:     #150d22;
+  --color-mt-sprint-list:   #221833;
+  --color-mt-sprint-card:   #2c2042;
+  --color-mt-sprint-card-hover: #342750;
+  --color-mt-sprint-line:   #3a2c54;
+  --color-mt-sprint-line-subtle: #2a1e40;
   --color-mt-sprint-accent: #a855f7;
+  --color-mt-sprint-accent-hi: #c084fc;
+  --color-mt-sprint-accent-dim: #7c3aed;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* ── Sidebar ─────────────────────────────────────────────────── */
+  --color-mt-sidebar-bg:    #091420;
+  --color-mt-sidebar-hover: #112031;
+  --color-mt-sidebar-active:#162840;
+
+  /* ── Semantic / shared ───────────────────────────────────────── */
+  --color-mt-danger:    #f87171;
+  --color-mt-danger-bg: #2d1515;
+  --color-mt-success:   #4ade80;
+  --color-mt-warning:   #fbbf24;
+
+  /* ── Typography ──────────────────────────────────────────────── */
+  --font-sans:  "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:  "Geist Mono", "JetBrains Mono", ui-monospace, "Fira Code", monospace;
+
+  /* ── Radius ──────────────────────────────────────────────────── */
+  --radius-sm:  3px;
+  --radius-md:  5px;
+  --radius-lg:  8px;
+
+  /* ── Motion tokens ───────────────────────────────────────────── */
+  --duration-fast:    120ms;
+  --duration-base:    180ms;
+  --duration-slow:    260ms;
+  --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:          cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* ── Reset & base ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 html, body {
   background: var(--color-mt-bg);
   color: var(--color-mt-text);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: var(--color-mt-line); border-radius: 4px; }
+/* ── Skip-to-main (a11y) ─────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 8px;
+  z-index: 9999;
+  padding: 6px 12px;
+  background: var(--color-mt-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: top 120ms ease;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ── Global focus ring ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-mt-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-mt-line);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-mt-muted);
+}
+
+/* ── Sidebar overlay (mobile) ────────────────────────────────── */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Sidebar drawer (mobile) ─────────────────────────────────── */
+.sidebar-drawer {
+  transform: translateX(-100%);
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+.sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+/* ── Reduce motion ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Board horizontal scroll (mobile snap) ───────────────────── */
+.board-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.board-scroll > * {
+  scroll-snap-align: start;
+}
+
+/* ── Card active press state ─────────────────────────────────── */
+.card-btn:active {
+  transform: scale(0.985);
+}
+
+/* ── Monospace label style (tag/badge) ────────────────────────── */
+.mono-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Drop-zone ring pulse ─────────────────────────────────────── */
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-mt-accent) 40%, transparent); }
+  50%       { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-mt-accent) 0%, transparent); }
+}
+.drop-ring {
+  animation: ring-pulse 1.2s ease infinite;
+}

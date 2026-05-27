@@ -20,7 +20,9 @@ type Props = {
 
 export function Board({ columns, variant = 'project', onCardClick }: Props) {
   const [cols, setCols] = useState(columns);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
 
   function findCardColumn(id: string) {
     return cols.find((col) => col.cards.some((c) => c.id === id));
@@ -32,7 +34,6 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
     const fromCol = findCardColumn(String(active.id));
     if (!fromCol) return;
 
-    // dropping onto a column id (empty area) or another card (id in cards)
     let toColId: string | null = null;
     let beforeCardId: string | null = null;
     const overId = String(over.id);
@@ -48,19 +49,20 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
     if (!toColId) return;
 
     const toCol = cols.find((c) => c.id === toColId)!;
-    // optimistic reorder
+
     setCols((prev) => {
       const next = prev.map((c) => ({ ...c, cards: [...c.cards] }));
       const from = next.find((c) => c.id === fromCol.id)!;
       const to = next.find((c) => c.id === toColId)!;
       const idx = from.cards.findIndex((c) => c.id === active.id);
       const [card] = from.cards.splice(idx, 1);
-      const insertAt = beforeCardId ? to.cards.findIndex((c) => c.id === beforeCardId) : to.cards.length;
+      const insertAt = beforeCardId
+        ? to.cards.findIndex((c) => c.id === beforeCardId)
+        : to.cards.length;
       to.cards.splice(insertAt < 0 ? to.cards.length : insertAt, 0, card);
       return next;
     });
 
-    // persist
     const position = (toCol.cards.findIndex((c) => c.id === beforeCardId) + 1) * 1000;
     if (variant === 'sprint') {
       moveInSprintAction(String(active.id), toColId as 'backlog' | 'doing' | 'done', position);
@@ -71,7 +73,16 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-3 p-4 overflow-x-auto h-full">
+      {/*
+        board-scroll: custom class in globals.css for smooth horizontal scroll
+        + touch scrolling. padding-bottom leaves room for scrollbar.
+      */}
+      <div
+        role="region"
+        aria-label="Board de tarefas"
+        className="board-scroll flex gap-3 p-4 pb-3 h-full"
+        style={{ paddingLeft: 'max(16px, env(safe-area-inset-left))' }}
+      >
         {cols.map((c) => (
           <List
             key={c.id}
@@ -83,6 +94,8 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
             quickCreate={c.quickCreate ?? null}
           />
         ))}
+        {/* trailing spacer so last column doesn't cut off on mobile */}
+        <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
     </DndContext>
   );

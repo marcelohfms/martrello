@@ -6,11 +6,26 @@ import { Card, type CardData } from './Card';
 type Props = { card: CardData; variant?: 'project' | 'sprint'; onClick?: () => void };
 
 export function SortableCard({ card, variant, onClick }: Props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id });
+
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+        opacity: isDragging ? 0.35 : 1,
+        // subtle scale while dragging ghost
+        scale: isDragging ? '1.02' : undefined,
+        zIndex: isDragging ? 10 : undefined,
+      }}
       {...attributes}
       {...listeners}
     >
