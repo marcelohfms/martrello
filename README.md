@@ -16,18 +16,20 @@ pnpm mcp:build    # builds the MCP server bundle
 
 ## MCP server setup (one-time)
 
-Add to `~/.claude.json`:
+Add the snippet below to your `~/.claude.json` under the `mcpServers` key. Replace `<ABSOLUTE_PATH_TO_REPO>` with where you cloned this repo (e.g., `/Users/you/code/martrello`):
 
 ```json
 {
   "mcpServers": {
     "martrello": {
       "command": "node",
-      "args": ["/Users/marceloferro/martrello/mcp/dist/index.js"]
+      "args": ["<ABSOLUTE_PATH_TO_REPO>/mcp/dist/index.js"]
     }
   }
 }
 ```
+
+Tip: get the path with `pwd` from the repo root.
 
 Restart Claude Code. Tools like `martrello_create_card`, `martrello_get_sprint`, `martrello_close_sprint` will appear.
 
