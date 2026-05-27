@@ -1,6 +1,5 @@
 // lib/db/schema.ts
-import { sqliteTable, text, integer, primaryKey, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
@@ -62,19 +61,17 @@ export const cardLabels = sqliteTable(
   }),
 );
 
-export const sprints = sqliteTable(
-  'sprints',
-  {
-    id: text('id').primaryKey(),
-    name: text('name'),
-    startedAt: integer('started_at').notNull(),
-    closedAt: integer('closed_at'),
-    cardsSnapshot: text('cards_snapshot'),
-  },
-  (t) => ({
-    oneActive: uniqueIndex('one_active_sprint').on(t.closedAt).where(sql`${t.closedAt} IS NULL`),
-  }),
-);
+// Invariant: at most one row with closed_at IS NULL (one active sprint).
+// Not enforced by a partial unique index because SQLite treats NULLs as distinct
+// in UNIQUE indexes; enforced in lib/core/sprint.ts (startSprint guards against
+// an existing active sprint before insert).
+export const sprints = sqliteTable('sprints', {
+  id: text('id').primaryKey(),
+  name: text('name'),
+  startedAt: integer('started_at').notNull(),
+  closedAt: integer('closed_at'),
+  cardsSnapshot: text('cards_snapshot'),
+});
 
 export const sprintSlots = sqliteTable(
   'sprint_slots',

@@ -68,5 +68,3 @@ CREATE TABLE `sprints` (
 	`closed_at` integer,
 	`cards_snapshot` text
 );
---> statement-breakpoint
-CREATE UNIQUE INDEX `one_active_sprint` ON `sprints` (`closed_at`) WHERE "sprints"."closed_at" IS NULL;

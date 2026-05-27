@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ffe80669-d8d2-4306-b5c7-6a394e05b7a0",
+  "id": "c196d22d-01bc-4ee4-a3d4-bb838410dc91",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "card_labels": {
@@ -470,16 +470,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "one_active_sprint": {
-          "name": "one_active_sprint",
-          "columns": [
-            "closed_at"
-          ],
-          "isUnique": true,
-          "where": "\"sprints\".\"closed_at\" IS NULL"
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
