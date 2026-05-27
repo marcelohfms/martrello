@@ -72,7 +72,7 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext id={`martrello-${variant}`} sensors={sensors} onDragEnd={onDragEnd}>
       {/*
         board-scroll: custom class in globals.css for smooth horizontal scroll
         + touch scrolling. padding-bottom leaves room for scrollbar.
