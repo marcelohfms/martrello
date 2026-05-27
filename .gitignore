@@ -49,5 +49,8 @@ martrello.db-shm
 # pnpm store
 .pnpm-store/
 
+# mcp build artifacts
+mcp/dist/
+
 # brainstorming companion
 .superpowers/
