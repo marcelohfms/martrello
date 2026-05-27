@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+build/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# environment
+.env
+.env.local
+.env*.local
+
+# database
+martrello.db
+martrello.db-journal
+martrello.db-wal
+martrello.db-shm
+
+# vercel
+.vercel/
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# brainstorming companion
+.superpowers/
