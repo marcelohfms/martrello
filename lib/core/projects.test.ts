@@ -39,6 +39,25 @@ describe('projects', () => {
     close();
   });
 
+  it('listProjects returns accurate listCount and cardCount', async () => {
+    const p = await createProject(db, { name: 'a' });
+    const { cards } = await import('@/lib/db/schema');
+    const full = await getProjectByNameOrId(db, p.id);
+    await db.insert(cards).values({
+      id: 'c1', projectId: p.id, listId: full.lists[0].id, title: 'x',
+      position: 1000, createdAt: Date.now(), updatedAt: Date.now(),
+    });
+    await db.insert(cards).values({
+      id: 'c2', projectId: p.id, listId: full.lists[0].id, title: 'y',
+      position: 2000, createdAt: Date.now(), updatedAt: Date.now(),
+      archivedAt: Date.now(),
+    });
+    const all = await listProjects(db);
+    expect(all[0].listCount).toBe(3);
+    expect(all[0].cardCount).toBe(1);
+    close();
+  });
+
   it('updates name and color', async () => {
     const p = await createProject(db, { name: 'foo' });
     const u = await updateProject(db, p.id, { name: 'bar', color: '#123456' });

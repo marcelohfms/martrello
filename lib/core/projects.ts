@@ -1,6 +1,6 @@
-import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, max, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
-import { projects, lists, type Project, type List } from '@/lib/db/schema';
+import { projects, lists, cards, type Project, type List } from '@/lib/db/schema';
 import { MartrelloError, suggestClosest } from '@/lib/errors';
 import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
@@ -49,20 +49,29 @@ export async function listProjects(
   db: Db,
   opts: { includeArchived?: boolean } = {},
 ): Promise<Array<Project & { listCount: number; cardCount: number }>> {
-  const baseQuery = db
-    .select({
-      project: projects,
-      listCount: sql<number>`(SELECT COUNT(*) FROM ${lists} WHERE ${lists.projectId} = ${projects.id})`,
-      cardCount: sql<number>`(SELECT COUNT(*) FROM cards WHERE cards.project_id = ${projects.id} AND cards.archived_at IS NULL)`,
-    })
-    .from(projects)
-    .orderBy(asc(projects.position));
-
-  const rows = opts.includeArchived
+  const baseQuery = db.select().from(projects).orderBy(asc(projects.position));
+  const projectRows = opts.includeArchived
     ? await baseQuery
     : await baseQuery.where(isNull(projects.archivedAt));
 
-  return rows.map((r) => ({ ...r.project, listCount: Number(r.listCount), cardCount: Number(r.cardCount) }));
+  const listCountRows = await db
+    .select({ projectId: lists.projectId, c: count() })
+    .from(lists)
+    .groupBy(lists.projectId);
+  const cardCountRows = await db
+    .select({ projectId: cards.projectId, c: count() })
+    .from(cards)
+    .where(isNull(cards.archivedAt))
+    .groupBy(cards.projectId);
+
+  const listCountByProject = new Map(listCountRows.map((r) => [r.projectId, Number(r.c)]));
+  const cardCountByProject = new Map(cardCountRows.map((r) => [r.projectId, Number(r.c)]));
+
+  return projectRows.map((p) => ({
+    ...p,
+    listCount: listCountByProject.get(p.id) ?? 0,
+    cardCount: cardCountByProject.get(p.id) ?? 0,
+  }));
 }
 
 export async function getProjectByNameOrId(
