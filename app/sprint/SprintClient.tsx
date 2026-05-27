@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react';
 import { Board, type Column } from '@/components/Board';
 import { CardPanel } from '@/components/CardPanel';
 import { closeSprintAction } from '@/app/actions';
+import { useAutoRefresh } from '@/components/useAutoRefresh';
 
 type Props = { columns: Column[]; sprintName: string; startedDays: number };
 
@@ -10,6 +11,7 @@ export function SprintClient({ columns, sprintName, startedDays }: Props) {
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  useAutoRefresh(3000);
 
   return (
     <>
