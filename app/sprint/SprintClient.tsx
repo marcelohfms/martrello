@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react';
 import { Board, type Column } from '@/components/Board';
 import { CardPanel } from '@/components/CardPanel';
 import { closeSprintAction } from '@/app/actions';
-import { useAutoRefresh } from '@/components/useAutoRefresh';
+import { useRealtimeRefresh } from '@/components/useRealtimeRefresh';
 
 type Props = { columns: Column[]; sprintName: string; startedDays: number };
 
@@ -11,7 +11,7 @@ export function SprintClient({ columns, sprintName, startedDays }: Props) {
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [confirming, setConfirming] = useState(false);
-  useAutoRefresh(3000);
+  useRealtimeRefresh();
 
   const totalCards = columns.reduce((sum, c) => sum + c.cards.length, 0);
   const doneCards  = columns.find((c) => c.id === 'done')?.cards.length ?? 0;
