@@ -87,11 +87,8 @@ export async function addToSprint(db: Db, cardId: string, sprintList: SprintList
   if (card.archivedAt) throw new MartrelloError('CARD_NOT_FOUND', `Card '${card.title}' está arquivado`);
 
   const existing = (await db.select().from(sprintSlots).where(eq(sprintSlots.cardId, cardId)))[0];
-  const maxPos = (await db
-    .select({ m: max(sprintSlots.position) })
-    .from(sprintSlots)
-    .where(and(eq(sprintSlots.sprintId, sprint.id), eq(sprintSlots.sprintList, sprintList))))[0]?.m ?? 0;
-  const newPos = maxPos + POSITION_STEP;
+  // Use the card's project position so the sprint order mirrors the project order
+  const newPos = card.position;
 
   if (existing) {
     await db.update(sprintSlots).set({ sprintList, position: newPos }).where(eq(sprintSlots.cardId, cardId));
