@@ -119,6 +119,12 @@ export async function moveCard(
     position: newPos,
     updatedAt: Date.now(),
   }).where(eq(cards.id, id));
+
+  // Sync sprint slot position to match the card's new project position
+  const slot = (await db.select().from(sprintSlots).where(eq(sprintSlots.cardId, id)))[0];
+  if (slot) {
+    await db.update(sprintSlots).set({ position: newPos }).where(eq(sprintSlots.cardId, id));
+  }
 }
 
 export async function archiveCard(db: Db, id: string): Promise<void> {
