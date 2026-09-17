@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import useSWR from 'swr';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { updateCardAction, toggleLabelAction, archiveCardAction, addToSprintAction, removeFromSprintAction } from '@/app/actions';
+import { updateCardAction, toggleLabelAction, archiveCardAction, addToSprintAction, removeFromSprintAction, addDependencyAction, removeDependencyAction } from '@/app/actions';
 import { DeadlinePicker } from './DeadlinePicker';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -17,11 +17,22 @@ export function CardPanel({ cardId, onClose }: Props) {
   const [descDraft, setDescDraft] = useState('');
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [depError, setDepError] = useState<string | null>(null);
 
   if (!data) return null;
-  const card = data.card as { id: string; title: string; description: string | null; dueDate: string | null; labels: Array<{ name: string; color: string }> };
+  const card = data.card as {
+    id: string;
+    title: string;
+    description: string | null;
+    dueDate: string | null;
+    labels: Array<{ name: string; color: string }>;
+    dependsOn: Array<{ id: string; title: string; isDone: boolean }>;
+  };
   const allLabels = data.allLabels as Array<{ name: string; color: string }>;
   const presentNames = new Set(card.labels.map((l) => l.name));
+  const dependsOn = card.dependsOn as Array<{ id: string; title: string; isDone: boolean }>;
+  const candidateCards = (data.candidateCards ?? []) as Array<{ id: string; title: string }>;
+  const linkedIds = new Set(dependsOn.map((d) => d.id));
 
   function saveTitle() {
     if (titleDraft == null || titleDraft === card.title) { setTitleDraft(null); return; }
@@ -115,6 +126,58 @@ export function CardPanel({ cardId, onClose }: Props) {
               );
             })}
           </div>
+        </section>
+
+        <section>
+          <div className="text-xs text-[var(--color-mt-muted)] mb-1">Depende de</div>
+          {dependsOn.length === 0 ? (
+            <p className="text-xs text-[var(--color-mt-muted)]">nenhuma dependência</p>
+          ) : (
+            <ul className="space-y-1 mb-2">
+              {dependsOn.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between gap-2 text-xs bg-[var(--color-mt-card)] px-2 py-1 rounded"
+                >
+                  <span className={d.isDone ? 'text-[var(--color-mt-muted)] line-through' : 'text-[var(--color-mt-text)]'}>
+                    {d.title}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => start(async () => { await removeDependencyAction(card.id, d.id); mutate(); })}
+                    className="text-[var(--color-mt-danger)] shrink-0"
+                  >
+                    remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <select
+            value=""
+            onChange={(e) => {
+              const blockerId = e.target.value;
+              if (!blockerId) return;
+              setDepError(null);
+              start(async () => {
+                try {
+                  await addDependencyAction(card.id, blockerId);
+                  mutate();
+                } catch (err) {
+                  setDepError(err instanceof Error ? err.message : 'Erro ao adicionar dependência');
+                }
+              });
+            }}
+            className="w-full text-xs bg-[var(--color-mt-card)] p-1.5 rounded text-[var(--color-mt-text)]"
+          >
+            <option value="">+ adicionar pré-requisito...</option>
+            {candidateCards
+              .filter((c) => !linkedIds.has(c.id))
+              .map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+          </select>
+          {depError && <p className="text-xs text-[var(--color-mt-danger)] mt-1">{depError}</p>}
         </section>
 
         <section className="flex flex-col gap-2">
