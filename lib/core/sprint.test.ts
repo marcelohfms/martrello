@@ -138,4 +138,18 @@ describe('sprint', () => {
     expect(all.map((s) => s.id)).toEqual([s2.id, s1.id]);
     close();
   });
+
+  it('sprint cards report isBlocked', async () => {
+    const c1 = await makeCard();
+    const c2 = await makeCard();
+    const { addDependency } = await import('./dependencies');
+    await addDependency(db, c2.id, c1.id);
+    await startSprint(db);
+    await addToSprint(db, c1.id);
+    await addToSprint(db, c2.id);
+    const active = await getActiveSprint(db);
+    const card2 = active!.cards.find((c) => c.id === c2.id)!;
+    expect(card2.isBlocked).toBe(true);
+    close();
+  });
 });

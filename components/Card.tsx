@@ -9,6 +9,7 @@ export type CardData = {
   labels: Array<{ name: string; color: string }>;
   projectName?: string;
   projectColor?: string;
+  isBlocked: boolean;
 };
 
 type Props = {

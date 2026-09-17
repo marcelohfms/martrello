@@ -60,6 +60,7 @@ export default async function SprintPage() {
       labels: c.labels,
       projectName: c.projectName,
       projectColor: c.projectColor,
+      isBlocked: c.isBlocked,
     });
   }
 

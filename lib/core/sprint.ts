@@ -4,6 +4,7 @@ import { ulid } from 'ulidx';
 import { sprints, sprintSlots, cards, projects, labels, cardLabels, type Sprint, type SprintList } from '@/lib/db/schema';
 import { MartrelloError } from '@/lib/errors';
 import { POSITION_STEP } from './positions';
+import { getBlockedStatuses } from './dependencies';
 import type { Db } from './test-helpers';
 
 export type SprintCard = {
@@ -16,6 +17,7 @@ export type SprintCard = {
   position: number;
   dueDate: string | null;
   labels: Array<{ name: string; color: string }>;
+  isBlocked: boolean;
 };
 
 export async function getActiveSprintRow(db: Db): Promise<Sprint | null> {
@@ -35,6 +37,8 @@ async function loadSprintCards(db: Db, sprintId: string): Promise<SprintCard[]> 
     .where(eq(sprintSlots.sprintId, sprintId))
     .orderBy(asc(sprintSlots.position));
 
+  const statuses = await getBlockedStatuses(db, rows.map((r) => r.card.id));
+
   const out: SprintCard[] = [];
   for (const r of rows) {
     const lrows = await db
@@ -52,6 +56,7 @@ async function loadSprintCards(db: Db, sprintId: string): Promise<SprintCard[]> 
       position: r.slot.position,
       dueDate: r.card.dueDate,
       labels: lrows.map((x) => ({ name: x.l.name, color: x.l.color })),
+      isBlocked: statuses.get(r.card.id)?.isBlocked ?? false,
     });
   }
   return out;

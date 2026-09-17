@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/client';
 import { getProjectByNameOrId } from '@/lib/core/projects';
+import { getBlockedStatuses } from '@/lib/core/dependencies';
 import { cards as cardsTbl, labels as labelsTbl, cardLabels } from '@/lib/db/schema';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { BoardClient } from './BoardClient';
@@ -34,6 +35,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     labelsByCard.get(r.cardId)!.push({ name: r.name, color: r.color });
   }
 
+  const statuses = await getBlockedStatuses(db, cardRows.map((c) => c.id));
+
   const totalCards = cardRows.length;
 
   const columns: Column[] = project.lists.map((list) => ({
@@ -44,6 +47,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       title: c.title,
       dueDate: c.dueDate,
       labels: labelsByCard.get(c.id) ?? [],
+      isBlocked: statuses.get(c.id)?.isBlocked ?? false,
     })),
     quickCreate: { projectId: project.id, listId: list.id },
   }));
