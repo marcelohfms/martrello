@@ -61,6 +61,20 @@ export const cardLabels = sqliteTable(
   }),
 );
 
+export const cardDependencies = sqliteTable(
+  'card_dependencies',
+  {
+    blockedCardId: text('blocked_card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    blockerCardId: text('blocker_card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.blockedCardId, t.blockerCardId] }),
+    byBlocked: index('deps_by_blocked').on(t.blockedCardId),
+    byBlocker: index('deps_by_blocker').on(t.blockerCardId),
+  }),
+);
+
 // Invariant: at most one row with closed_at IS NULL (one active sprint).
 // Not enforced by a partial unique index because SQLite treats NULLs as distinct
 // in UNIQUE indexes; enforced in lib/core/sprint.ts (startSprint guards against
@@ -92,6 +106,7 @@ export type NewProject = typeof projects.$inferInsert;
 export type List = typeof lists.$inferSelect;
 export type Card = typeof cards.$inferSelect;
 export type Label = typeof labels.$inferSelect;
+export type CardDependency = typeof cardDependencies.$inferSelect;
 export type Sprint = typeof sprints.$inferSelect;
 export type SprintSlot = typeof sprintSlots.$inferSelect;
 export type SprintList = 'backlog' | 'doing' | 'done';
