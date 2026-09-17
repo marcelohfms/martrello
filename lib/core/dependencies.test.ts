@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
 import { createProject, getProjectByNameOrId } from './projects';
 import { createCard, moveCard, archiveCard } from './cards';
-import { addDependency, removeDependency, getBlockedStatuses } from './dependencies';
+import { addDependency, removeDependency, getBlockedStatuses, getCycleFreeCandidates } from './dependencies';
 
 let db: Db;
 let close: () => void;
@@ -81,6 +81,22 @@ describe('dependencies', () => {
     close();
   });
 
+  it('removeDependency actually deletes an existing edge', async () => {
+    const { p } = await setup();
+    const a = await createCard(db, { project: p.id, title: 'a' });
+    const b = await createCard(db, { project: p.id, title: 'b' });
+    await addDependency(db, b.id, a.id);
+    let statuses = await getBlockedStatuses(db, [b.id]);
+    expect(statuses.get(b.id)!.dependsOn).toHaveLength(1);
+    expect(statuses.get(b.id)!.isBlocked).toBe(true);
+
+    await removeDependency(db, b.id, a.id);
+    statuses = await getBlockedStatuses(db, [b.id]);
+    expect(statuses.get(b.id)!.dependsOn).toEqual([]);
+    expect(statuses.get(b.id)!.isBlocked).toBe(false);
+    close();
+  });
+
   it('a card with no dependencies is never blocked', async () => {
     const { p } = await setup();
     const a = await createCard(db, { project: p.id, title: 'a' });
@@ -146,5 +162,23 @@ describe('dependencies', () => {
     expect(statuses.get(a.id)).toEqual({ isBlocked: false, dependsOn: [] });
     expect(statuses.get(b.id)!.isBlocked).toBe(true);
     close();
+  });
+
+  describe('getCycleFreeCandidates', () => {
+    it('excludes a transitive-cycle candidate while keeping safe ones', async () => {
+      const { p } = await setup();
+      const a = await createCard(db, { project: p.id, title: 'a' });
+      const b = await createCard(db, { project: p.id, title: 'b' });
+      const c = await createCard(db, { project: p.id, title: 'c' });
+      const d = await createCard(db, { project: p.id, title: 'd' });
+      await addDependency(db, a.id, b.id); // a depends on b
+      await addDependency(db, b.id, c.id); // b depends on c (a -> b -> c transitively)
+
+      // Picking a as a new blocker of c would close the loop (a is transitively blocked
+      // by c via a -> b -> c), so a must be excluded. d is unrelated and safe.
+      const safe = await getCycleFreeCandidates(db, c.id, [a.id, d.id]);
+      expect(safe).not.toContain(a.id);
+      expect(safe).toContain(d.id);
+    });
   });
 });

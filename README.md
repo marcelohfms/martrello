@@ -124,6 +124,8 @@ Restart Claude Code. The `martrello_*` tools become available in every session.
 
 **Cards** — `martrello_create_card`, `martrello_get_card`, `martrello_update_card`, `martrello_move_card`, `martrello_archive_card`, `martrello_unarchive_card`
 
+**Dependencies** — `martrello_add_dependency`, `martrello_remove_dependency`
+
 **Labels** — `martrello_create_label`, `martrello_add_label`, `martrello_remove_label`, `martrello_delete_label`
 
 **Sprint** — `martrello_start_sprint`, `martrello_add_to_sprint`, `martrello_move_in_sprint`, `martrello_remove_from_sprint`, `martrello_close_sprint`

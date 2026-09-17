@@ -30,6 +30,23 @@ async function wouldCreateCycle(db: Db, blockedCardId: string, blockerCardId: st
   return false;
 }
 
+// Returns the subset of candidateIds that would NOT create a cycle if added
+// as a new blocker of blockedCardId (i.e. addDependency(db, blockedCardId, candidateId)
+// would succeed as far as cycle-detection is concerned).
+export async function getCycleFreeCandidates(
+  db: Db,
+  blockedCardId: string,
+  candidateIds: string[],
+): Promise<string[]> {
+  const safe: string[] = [];
+  for (const candidateId of candidateIds) {
+    if (!(await wouldCreateCycle(db, blockedCardId, candidateId))) {
+      safe.push(candidateId);
+    }
+  }
+  return safe;
+}
+
 export async function addDependency(
   db: Db,
   blockedCardId: string,

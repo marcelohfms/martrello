@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { getCardById, searchCards } from '@/lib/core/cards';
 import { listLabels } from '@/lib/core/labels';
+import { getCycleFreeCandidates } from '@/lib/core/dependencies';
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,8 +11,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const card = await getCardById(db, id);
   const allLabels = await listLabels(db);
   const projectCards = await searchCards(db, { query: '', project: card.projectId });
-  const candidateCards = projectCards
-    .filter((c) => c.id !== id)
+  const otherCards = projectCards.filter((c) => c.id !== id);
+  const cycleFreeIds = new Set(await getCycleFreeCandidates(db, id, otherCards.map((c) => c.id)));
+  const candidateCards = otherCards
+    .filter((c) => cycleFreeIds.has(c.id))
     .map((c) => ({ id: c.id, title: c.title }));
   return NextResponse.json({ card, allLabels, candidateCards });
 }
