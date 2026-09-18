@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { List } from './List';
 import type { CardData } from './Card';
@@ -20,6 +20,9 @@ type Props = {
 
 export function Board({ columns, variant = 'project', onCardClick }: Props) {
   const [cols, setCols] = useState(columns);
+  useEffect(() => {
+    setCols(columns);
+  }, [columns]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
