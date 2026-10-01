@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useProjectPrivacy } from './ProjectPrivacyContext';
 
 type Project = {
   id: string;
@@ -47,6 +48,16 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
+function EyeIcon({ open, className }: { open: boolean; className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3" />
+      {!open && <path d="M2 2l12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />}
+    </svg>
+  );
+}
+
 function SprintIcon() {
   return (
     <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
@@ -69,6 +80,7 @@ function ProjectDot({ color }: { color: string }) {
 export function SidebarClient({ projects, sprintName }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { revealed, toggle } = useProjectPrivacy();
 
   // Close drawer on route change
   useEffect(() => {
@@ -150,6 +162,21 @@ export function SidebarClient({ projects, sprintName }: Props) {
           ">
             <span className="text-[var(--color-mt-accent)]">mar</span>trello
           </span>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-pressed={revealed}
+            aria-label={revealed ? 'Esconder nomes reais dos projetos' : 'Mostrar nomes reais dos projetos'}
+            title={revealed ? 'Esconder nomes reais' : 'Mostrar nomes reais'}
+            className="
+              w-7 h-7 flex items-center justify-center shrink-0
+              rounded text-[var(--color-mt-muted)]
+              hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
+              transition-colors duration-[120ms]
+            "
+          >
+            <EyeIcon open={revealed} />
+          </button>
           {/* Mobile close */}
           <button
             type="button"
