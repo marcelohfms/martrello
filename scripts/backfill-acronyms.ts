@@ -3,6 +3,11 @@ import { getDb, closeDb } from '@/lib/db/client';
 import { listProjects, updateProject, PROJECT_COLOR_PALETTE } from '@/lib/core/projects';
 import { suggestAcronym } from '@/lib/core/acronym';
 
+// NOTE: this is a one-off script that has already been run successfully against
+// the real dev DB. It unconditionally recolors every project on every run (by
+// design, for its original one-time purpose) — re-running it later will reset
+// every project's color to the palette-by-creation-order assignment, silently
+// overwriting any color a human has since picked by hand.
 async function main() {
   const db = getDb();
   const all = await listProjects(db, { includeArchived: true });

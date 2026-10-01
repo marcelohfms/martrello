@@ -154,7 +154,7 @@ export function Card({ card, variant = 'project', onClick }: Props) {
                 font-medium truncate max-w-[100px]
               "
               style={{ color: card.projectColor ?? 'var(--color-mt-muted-hi)' }}
-              title={card.projectName}
+              title={revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
             >
               {revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
             </span>

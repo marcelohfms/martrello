@@ -129,4 +129,17 @@ describe('projects', () => {
     await expect(updateProject(db, b.id, { acronym: 'CCC' })).rejects.toThrow(/NAME_CONFLICT/);
     close();
   });
+
+  it('createProject auto-suggests an acronym when an explicit empty string is passed', async () => {
+    const p = await createProject(db, { name: 'Nubank', acronym: '' });
+    expect(p.acronym).toBe('NBK');
+    close();
+  });
+
+  it('updateProject treats an empty-string acronym patch as no change, without corrupting the row', async () => {
+    const a = await createProject(db, { name: 'a', acronym: 'AAA' });
+    const updated = await updateProject(db, a.id, { acronym: '' });
+    expect(updated.acronym).toBe('AAA');
+    close();
+  });
 });

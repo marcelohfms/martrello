@@ -23,6 +23,7 @@ Most task tools make *you* do the data entry through forms. martrello flips that
 - **Realtime updates** — the board reflects DB changes in ~100-300ms via Server-Sent Events, whether the write came from the UI or from Claude via MCP. No manual refresh.
 - **Natural-language dates** — when writing through Claude, due dates accept ISO (`2026-06-15`) or pt-BR shorthands (`hoje`, `amanhã`, `sex`, `+3d`, `próxima sexta`, `daqui 2 semanas`).
 - **Dark mode** — Trello-style layout, petrol-blue palette for projects, purple for the sprint.
+- **Project privacy acronyms** — project names are masked as 3-letter acronyms throughout the UI by default (handy when screenshotting), with an eye-icon toggle in the sidebar to reveal real names for the current session; resets on reload.
 
 ---
 

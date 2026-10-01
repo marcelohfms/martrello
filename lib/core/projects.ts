@@ -22,7 +22,8 @@ export async function createProject(
     throw new MartrelloError('NAME_CONFLICT', `Já existe projeto chamado '${input.name}'`);
   }
 
-  const acronym = (input.acronym ?? suggestAcronym(input.name)).toUpperCase();
+  const trimmedAcronym = input.acronym?.trim();
+  const acronym = (trimmedAcronym || suggestAcronym(input.name)).toUpperCase();
   const acronymConflict = await db.select().from(projects).where(eq(projects.acronym, acronym));
   if (acronymConflict.length > 0) {
     throw new MartrelloError('NAME_CONFLICT', `Já existe projeto com o acrônimo '${acronym}'`);
@@ -139,9 +140,15 @@ export async function updateProject(
     if (conflict.length > 0) {
       throw new MartrelloError('NAME_CONFLICT', `Já existe projeto com o acrônimo '${normalizedPatch.acronym}'`);
     }
+  } else if (patch.acronym === '') {
+    // An empty-string acronym means "no change requested" — same treatment as
+    // undefined, so it never reaches the DB and bypasses the uniqueness check above.
+    delete normalizedPatch.acronym;
   }
 
-  await db.update(projects).set(normalizedPatch).where(eq(projects.id, id));
+  if (Object.keys(normalizedPatch).length > 0) {
+    await db.update(projects).set(normalizedPatch).where(eq(projects.id, id));
+  }
 
   const row = (await db.select().from(projects).where(eq(projects.id, id)))[0];
   if (!row) throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto ${id} não existe`);

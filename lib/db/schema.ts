@@ -4,6 +4,9 @@ import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlit
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
+  // default('') is a leftover migration-safety net from the original 2-phase rollout
+  // (see migrations 0002/0003) — createProject/updateProject always supply a real
+  // value, so '' should never actually appear in a new row.
   acronym: text('acronym').notNull().unique().default(''),
   color: text('color').notNull(),
   position: integer('position').notNull(),
