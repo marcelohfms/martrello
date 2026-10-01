@@ -1,6 +1,7 @@
 'use client';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useProjectPrivacy } from './ProjectPrivacyContext';
 
 export type CardData = {
   id: string;
@@ -8,6 +9,7 @@ export type CardData = {
   dueDate: string | null;
   labels: Array<{ name: string; color: string }>;
   projectName?: string;
+  projectAcronym?: string;
   projectColor?: string;
   isBlocked: boolean;
 };
@@ -56,6 +58,7 @@ export function Card({ card, variant = 'project', onClick }: Props) {
   const primaryLabel = card.labels[0];
   const accent = card.isBlocked ? 'var(--color-mt-warning)' : (primaryLabel?.color ?? 'transparent');
   const isSprint = variant === 'sprint';
+  const { revealed } = useProjectPrivacy();
 
   const bg = isSprint
     ? 'bg-[var(--color-mt-sprint-card)] hover:bg-[var(--color-mt-sprint-card-hover)]'
@@ -153,7 +156,7 @@ export function Card({ card, variant = 'project', onClick }: Props) {
               style={{ color: card.projectColor ?? 'var(--color-mt-muted-hi)' }}
               title={card.projectName}
             >
-              {card.projectName}
+              {revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
             </span>
           )}
         </div>

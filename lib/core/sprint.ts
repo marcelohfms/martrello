@@ -12,6 +12,7 @@ export type SprintCard = {
   title: string;
   projectId: string;
   projectName: string;
+  projectAcronym: string;
   projectColor: string;
   sprintList: SprintList;
   position: number;
@@ -51,6 +52,7 @@ async function loadSprintCards(db: Db, sprintId: string): Promise<SprintCard[]> 
       title: r.card.title,
       projectId: r.project.id,
       projectName: r.project.name,
+      projectAcronym: r.project.acronym,
       projectColor: r.project.color,
       sprintList: r.slot.sprintList,
       position: r.slot.position,

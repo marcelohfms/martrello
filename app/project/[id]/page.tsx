@@ -7,6 +7,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import { BoardClient } from './BoardClient';
 import type { Column } from '@/components/Board';
 import type { CardData } from '@/components/Card';
+import { ProjectHeaderName } from '@/components/ProjectHeaderName';
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -67,9 +68,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           style={{ background: project.color }}
           aria-hidden="true"
         />
-        <h1 className="text-[14px] font-semibold text-[var(--color-mt-text)] truncate">
-          {project.name}
-        </h1>
+        <ProjectHeaderName name={project.name} acronym={project.acronym} />
         <span className="text-[12px] text-[var(--color-mt-muted)] hidden sm:inline">
           · projeto
         </span>

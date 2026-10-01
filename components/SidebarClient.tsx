@@ -8,6 +8,7 @@ import { useProjectPrivacy } from './ProjectPrivacyContext';
 type Project = {
   id: string;
   name: string;
+  acronym: string;
   color: string;
   cardCount: number;
 };
@@ -255,7 +256,7 @@ export function SidebarClient({ projects, sprintName }: Props) {
               >
                 <span className="flex items-center gap-2.5 min-w-0">
                   <ProjectDot color={p.color} />
-                  <span className="truncate">{p.name}</span>
+                  <span className="truncate">{revealed ? p.name : p.acronym}</span>
                 </span>
                 <span className="
                   mono-badge shrink-0

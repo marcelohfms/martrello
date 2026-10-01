@@ -139,6 +139,18 @@ describe('sprint', () => {
     close();
   });
 
+  it('sprint cards report the project acronym', async () => {
+    const p = await createProject(db, { name: 'Nubank' });
+    const full = await getProjectByNameOrId(db, p.id);
+    const c = await createCard(db, { project: p.id, title: 'x', list: full.lists[0].id });
+    await startSprint(db);
+    await addToSprint(db, c.id);
+    const active = await getActiveSprint(db);
+    const card = active!.cards.find((x) => x.id === c.id)!;
+    expect(card.projectAcronym).toBe('NBK');
+    close();
+  });
+
   it('sprint cards report isBlocked', async () => {
     const c1 = await makeCard();
     const c2 = await makeCard();
