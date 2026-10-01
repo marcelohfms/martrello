@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `projects_acronym_unique` ON `projects` (`acronym`);
