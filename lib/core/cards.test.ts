@@ -4,6 +4,7 @@ import { makeTestDb, type Db } from './test-helpers';
 import { createProject, getProjectByNameOrId } from './projects';
 import { createLabel } from './labels';
 import { createCard, updateCard, moveCard, archiveCard, unarchiveCard, getCardById, searchCards } from './cards';
+import { addDependency } from './dependencies';
 
 let db: Db;
 let close: () => void;
@@ -119,6 +120,17 @@ describe('cards', () => {
     await createCard(db, { project: p.id, title: 'criar landing' });
     const out = await searchCards(db, { query: 'revisar' });
     expect(out.map((c) => c.title)).toEqual(['revisar PR #123']);
+    close();
+  });
+
+  it('getCardById reports isBlocked and dependsOn', async () => {
+    const { p } = await setup();
+    const a = await createCard(db, { project: p.id, title: 'a' });
+    const b = await createCard(db, { project: p.id, title: 'b' });
+    await addDependency(db, b.id, a.id);
+    const card = await getCardById(db, b.id);
+    expect(card.isBlocked).toBe(true);
+    expect(card.dependsOn).toEqual([{ id: a.id, title: 'a', isDone: false }]);
     close();
   });
 });

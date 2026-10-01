@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
-import { createCard, updateCard, moveCard, archiveCard } from '@/lib/core/cards';
+import { createCard, updateCard, moveCard, archiveCard, getCardById } from '@/lib/core/cards';
 import { addToSprint, moveInSprint, removeFromSprint, closeSprint, startSprint } from '@/lib/core/sprint';
 import { addLabelToCard, removeLabelFromCard } from '@/lib/core/labels';
+import { addDependency, removeDependency } from '@/lib/core/dependencies';
 
 export async function quickCreateCardAction(projectId: string, listId: string, title: string) {
   if (!title.trim()) return;
@@ -61,4 +62,18 @@ export async function toggleLabelAction(cardId: string, labelName: string, prese
   else await addLabelToCard(getDb(), cardId, labelName);
   revalidatePath('/sprint');
   revalidatePath('/');
+}
+
+export async function addDependencyAction(cardId: string, blockerCardId: string) {
+  await addDependency(getDb(), cardId, blockerCardId);
+  const card = await getCardById(getDb(), cardId);
+  revalidatePath(`/project/${card.projectId}`);
+  revalidatePath('/sprint');
+}
+
+export async function removeDependencyAction(cardId: string, blockerCardId: string) {
+  await removeDependency(getDb(), cardId, blockerCardId);
+  const card = await getCardById(getDb(), cardId);
+  revalidatePath(`/project/${card.projectId}`);
+  revalidatePath('/sprint');
 }

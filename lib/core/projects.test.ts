@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
-import { createProject, listProjects, updateProject, archiveProject, reorderProjects, getProjectByNameOrId } from './projects';
+import { createProject, listProjects, updateProject, archiveProject, reorderProjects, getProjectByNameOrId, PROJECT_COLOR_PALETTE } from './projects';
 import { MartrelloError } from '@/lib/errors';
 
 let db: Db;
@@ -86,6 +86,60 @@ describe('projects', () => {
       expect((e as MartrelloError).code).toBe('PROJECT_NOT_FOUND');
       expect((e as MartrelloError).suggestions).toContain('martrello');
     }
+    close();
+  });
+
+  it('auto-suggests an acronym when none provided', async () => {
+    const p = await createProject(db, { name: 'Nubank' });
+    expect(p.acronym).toBe('NBK');
+    close();
+  });
+
+  it('accepts an explicit acronym, normalized to uppercase', async () => {
+    const p = await createProject(db, { name: 'foo', acronym: 'xyz' });
+    expect(p.acronym).toBe('XYZ');
+    close();
+  });
+
+  it('rejects a duplicate acronym on create, regardless of case', async () => {
+    await createProject(db, { name: 'foo', acronym: 'ABC' });
+    await expect(createProject(db, { name: 'bar', acronym: 'abc' })).rejects.toThrow(/NAME_CONFLICT/);
+    close();
+  });
+
+  it('rejects two different names whose auto-suggested acronyms happen to collide', async () => {
+    await createProject(db, { name: 'Lemon' });
+    await expect(createProject(db, { name: 'Lumon' })).rejects.toThrow(/NAME_CONFLICT/);
+    close();
+  });
+
+  it('cycles through the green palette by creation order when color is omitted', async () => {
+    const a = await createProject(db, { name: 'a' });
+    const b = await createProject(db, { name: 'b' });
+    expect(a.color).toBe(PROJECT_COLOR_PALETTE[0]);
+    expect(b.color).toBe(PROJECT_COLOR_PALETTE[1]);
+    close();
+  });
+
+  it('updateProject can change the acronym, rejecting duplicates case-insensitively', async () => {
+    const a = await createProject(db, { name: 'a', acronym: 'AAA' });
+    const b = await createProject(db, { name: 'b', acronym: 'BBB' });
+    const updated = await updateProject(db, a.id, { acronym: 'ccc' });
+    expect(updated.acronym).toBe('CCC');
+    await expect(updateProject(db, b.id, { acronym: 'CCC' })).rejects.toThrow(/NAME_CONFLICT/);
+    close();
+  });
+
+  it('createProject auto-suggests an acronym when an explicit empty string is passed', async () => {
+    const p = await createProject(db, { name: 'Nubank', acronym: '' });
+    expect(p.acronym).toBe('NBK');
+    close();
+  });
+
+  it('updateProject treats an empty-string acronym patch as no change, without corrupting the row', async () => {
+    const a = await createProject(db, { name: 'a', acronym: 'AAA' });
+    const updated = await updateProject(db, a.id, { acronym: '' });
+    expect(updated.acronym).toBe('AAA');
     close();
   });
 });

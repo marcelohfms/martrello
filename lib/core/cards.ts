@@ -8,6 +8,7 @@ import { parseDate } from './dates';
 import { getProjectByNameOrId } from './projects';
 import { getListByNameOrId } from './lists';
 import { addLabelToCard } from './labels';
+import { getBlockedStatuses, type DependencyInfo } from './dependencies';
 import type { Db } from './test-helpers';
 
 function maybeParseDate(input?: string | null): string | undefined {
@@ -62,7 +63,7 @@ export async function createCard(
   return (await db.select().from(cards).where(eq(cards.id, id)))[0];
 }
 
-export async function getCardById(db: Db, id: string): Promise<Card & { labels: Label[] }> {
+export async function getCardById(db: Db, id: string): Promise<Card & { labels: Label[]; isBlocked: boolean; dependsOn: DependencyInfo[] }> {
   const card = (await db.select().from(cards).where(eq(cards.id, id)))[0];
   if (!card) throw new MartrelloError('CARD_NOT_FOUND', `Card ${id} não existe`);
   const labelRows = await db
@@ -70,7 +71,8 @@ export async function getCardById(db: Db, id: string): Promise<Card & { labels: 
     .from(cardLabels)
     .innerJoin(labels, eq(cardLabels.labelId, labels.id))
     .where(eq(cardLabels.cardId, id));
-  return { ...card, labels: labelRows.map((r) => r.l) };
+  const status = (await getBlockedStatuses(db, [id])).get(id)!;
+  return { ...card, labels: labelRows.map((r) => r.l), ...status };
 }
 
 export async function updateCard(
@@ -119,6 +121,12 @@ export async function moveCard(
     position: newPos,
     updatedAt: Date.now(),
   }).where(eq(cards.id, id));
+
+  // Sync sprint slot position to match the card's new project position
+  const slot = (await db.select().from(sprintSlots).where(eq(sprintSlots.cardId, id)))[0];
+  if (slot) {
+    await db.update(sprintSlots).set({ position: newPos }).where(eq(sprintSlots.cardId, id));
+  }
 }
 
 export async function archiveCard(db: Db, id: string): Promise<void> {

@@ -1,6 +1,7 @@
 'use client';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useProjectPrivacy } from './ProjectPrivacyContext';
 
 export type CardData = {
   id: string;
@@ -8,7 +9,9 @@ export type CardData = {
   dueDate: string | null;
   labels: Array<{ name: string; color: string }>;
   projectName?: string;
+  projectAcronym?: string;
   projectColor?: string;
+  isBlocked: boolean;
 };
 
 type Props = {
@@ -35,14 +38,32 @@ function CalendarIcon({ className }: { className?: string }) {
   );
 }
 
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect x="2.5" y="5.5" width="7" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M4 5.5V3.8a2 2 0 1 1 4 0V5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function Card({ card, variant = 'project', onClick }: Props) {
   const primaryLabel = card.labels[0];
-  const accent = primaryLabel?.color;
+  const accent = card.isBlocked ? 'var(--color-mt-warning)' : (primaryLabel?.color ?? 'transparent');
   const isSprint = variant === 'sprint';
+  const { revealed } = useProjectPrivacy();
 
   const bg = isSprint
     ? 'bg-[var(--color-mt-sprint-card)] hover:bg-[var(--color-mt-sprint-card-hover)]'
     : 'bg-[var(--color-mt-card)] hover:bg-[var(--color-mt-card-hover)]';
+  const blockedOpacity = card.isBlocked ? 'opacity-70 hover:opacity-100' : '';
 
   const isOverdue = card.dueDate ? parseISO(card.dueDate) < new Date() : false;
 
@@ -59,6 +80,7 @@ export function Card({ card, variant = 'project', onClick }: Props) {
         card-btn
         w-full text-left rounded-[var(--radius-sm)]
         ${bg}
+        ${blockedOpacity}
         px-2.5 py-2
         border-l-[3px]
         shadow-sm
@@ -70,7 +92,7 @@ export function Card({ card, variant = 'project', onClick }: Props) {
         focus-visible:rounded-[var(--radius-sm)]
         group
       `}
-      style={{ borderLeftColor: accent ?? 'transparent' }}
+      style={{ borderLeftColor: accent }}
     >
       {/* Title */}
       <p className="
@@ -80,8 +102,12 @@ export function Card({ card, variant = 'project', onClick }: Props) {
         group-hover:text-white
         transition-colors duration-[120ms]
         break-words
+        flex items-center gap-1
       ">
-        {card.title}
+        {card.isBlocked && (
+          <LockIcon className="text-[var(--color-mt-warning)] shrink-0" />
+        )}
+        <span>{card.title}</span>
       </p>
 
       {/* Meta row */}
@@ -128,9 +154,9 @@ export function Card({ card, variant = 'project', onClick }: Props) {
                 font-medium truncate max-w-[100px]
               "
               style={{ color: card.projectColor ?? 'var(--color-mt-muted-hi)' }}
-              title={card.projectName}
+              title={revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
             >
-              {card.projectName}
+              {revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
             </span>
           )}
         </div>

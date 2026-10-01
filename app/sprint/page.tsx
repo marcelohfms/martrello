@@ -59,7 +59,9 @@ export default async function SprintPage() {
       dueDate: c.dueDate,
       labels: c.labels,
       projectName: c.projectName,
+      projectAcronym: c.projectAcronym,
       projectColor: c.projectColor,
+      isBlocked: c.isBlocked,
     });
   }
 

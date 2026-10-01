@@ -4,6 +4,10 @@ import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlit
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
+  // default('') is a leftover migration-safety net from the original 2-phase rollout
+  // (see migrations 0002/0003) — createProject/updateProject always supply a real
+  // value, so '' should never actually appear in a new row.
+  acronym: text('acronym').notNull().unique().default(''),
   color: text('color').notNull(),
   position: integer('position').notNull(),
   createdAt: integer('created_at').notNull(),
@@ -61,6 +65,20 @@ export const cardLabels = sqliteTable(
   }),
 );
 
+export const cardDependencies = sqliteTable(
+  'card_dependencies',
+  {
+    blockedCardId: text('blocked_card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    blockerCardId: text('blocker_card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.blockedCardId, t.blockerCardId] }),
+    byBlocked: index('deps_by_blocked').on(t.blockedCardId),
+    byBlocker: index('deps_by_blocker').on(t.blockerCardId),
+  }),
+);
+
 // Invariant: at most one row with closed_at IS NULL (one active sprint).
 // Not enforced by a partial unique index because SQLite treats NULLs as distinct
 // in UNIQUE indexes; enforced in lib/core/sprint.ts (startSprint guards against
@@ -92,6 +110,7 @@ export type NewProject = typeof projects.$inferInsert;
 export type List = typeof lists.$inferSelect;
 export type Card = typeof cards.$inferSelect;
 export type Label = typeof labels.$inferSelect;
+export type CardDependency = typeof cardDependencies.$inferSelect;
 export type Sprint = typeof sprints.$inferSelect;
 export type SprintSlot = typeof sprintSlots.$inferSelect;
 export type SprintList = 'backlog' | 'doing' | 'done';

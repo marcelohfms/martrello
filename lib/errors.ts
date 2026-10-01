@@ -10,7 +10,9 @@ export type ErrorCode =
   | 'LIST_NOT_IN_PROJECT'
   | 'LIST_NOT_EMPTY'
   | 'NAME_CONFLICT'
-  | 'INVALID_INPUT';
+  | 'INVALID_INPUT'
+  | 'CROSS_PROJECT_DEPENDENCY'
+  | 'CYCLE_DETECTED';
 
 export class MartrelloError extends Error {
   public readonly originalMessage: string;

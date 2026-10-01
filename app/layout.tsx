@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
+import { ProjectPrivacyProvider } from '@/components/ProjectPrivacyContext';
 
 export const metadata: Metadata = {
   title: 'martrello',
@@ -21,10 +22,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main-content" className="skip-link">
           Pular para conteúdo principal
         </a>
-        <Sidebar />
-        <main id="main-content" className="flex-1 min-w-0">
-          {children}
-        </main>
+        <ProjectPrivacyProvider>
+          <Sidebar />
+          <main id="main-content" className="flex-1 min-w-0">
+            {children}
+          </main>
+        </ProjectPrivacyProvider>
       </body>
     </html>
   );

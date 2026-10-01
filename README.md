@@ -23,6 +23,7 @@ Most task tools make *you* do the data entry through forms. martrello flips that
 - **Realtime updates** — the board reflects DB changes in ~100-300ms via Server-Sent Events, whether the write came from the UI or from Claude via MCP. No manual refresh.
 - **Natural-language dates** — when writing through Claude, due dates accept ISO (`2026-06-15`) or pt-BR shorthands (`hoje`, `amanhã`, `sex`, `+3d`, `próxima sexta`, `daqui 2 semanas`).
 - **Dark mode** — Trello-style layout, petrol-blue palette for projects, purple for the sprint.
+- **Project privacy acronyms** — project names are masked as 3-letter acronyms throughout the UI by default (handy when screenshotting), with an eye-icon toggle in the sidebar to reveal real names for the current session; resets on reload.
 
 ---
 
@@ -123,6 +124,8 @@ Restart Claude Code. The `martrello_*` tools become available in every session.
 **Lists** — `martrello_create_list`, `martrello_rename_list`, `martrello_delete_list`, `martrello_reorder_lists`
 
 **Cards** — `martrello_create_card`, `martrello_get_card`, `martrello_update_card`, `martrello_move_card`, `martrello_archive_card`, `martrello_unarchive_card`
+
+**Dependencies** — `martrello_add_dependency`, `martrello_remove_dependency`
 
 **Labels** — `martrello_create_label`, `martrello_add_label`, `martrello_remove_label`, `martrello_delete_label`
 

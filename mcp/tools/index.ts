@@ -6,6 +6,7 @@ import { listTools } from './lists';
 import { labelTools } from './labels';
 import { cardTools } from './cards';
 import { sprintTools } from './sprint';
+import { dependencyTools } from './dependencies';
 
 export type MartrelloTool = {
   definition: Tool;
@@ -19,6 +20,7 @@ export const tools: MartrelloTool[] = [
   ...labelTools,
   ...cardTools,
   ...sprintTools,
+  ...dependencyTools,
 ];
 
 export function findTool(name: string): MartrelloTool | undefined {
