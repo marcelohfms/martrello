@@ -14,7 +14,7 @@ export const projectTools: MartrelloTool[] = [
         properties: {
           name: { type: 'string' },
           acronym: { type: 'string', description: '3 letras; auto-sugerido se omitido' },
-          color: { type: 'string', description: 'hex; default #64748b' },
+          color: { type: 'string', description: 'hex; default: cycles through a green palette' },
           lists: { type: 'array', items: { type: 'string' } },
         },
       },
