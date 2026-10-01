@@ -15,6 +15,13 @@
       "when": 1789679128056,
       "tag": "0001_overjoyed_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790885043244,
+      "tag": "0002_clumsy_cable",
+      "breakpoints": true
     }
   ]
 }

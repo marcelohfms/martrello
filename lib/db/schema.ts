@@ -4,6 +4,12 @@ import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlit
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
+  // Added without .unique() here: the real dev DB already has 9 rows, and
+  // SQLite can't add a UNIQUE NOT NULL column with a single shared default
+  // to a populated table (every row's default would collide). The unique
+  // index is added in a second migration (Task 4) after Task 3's backfill
+  // gives every row a distinct value.
+  acronym: text('acronym').notNull().default(''),
   color: text('color').notNull(),
   position: integer('position').notNull(),
   createdAt: integer('created_at').notNull(),
