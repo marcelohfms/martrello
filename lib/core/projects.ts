@@ -4,20 +4,33 @@ import { projects, lists, cards, type Project, type List } from '@/lib/db/schema
 import { MartrelloError, suggestClosest } from '@/lib/errors';
 import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
+import { suggestAcronym } from './acronym';
 
 export const DEFAULT_LISTS = ['A fazer', 'Fazendo', 'Feito'] as const;
-export const DEFAULT_COLOR = '#64748b';
+
+export const PROJECT_COLOR_PALETTE = [
+  '#8a9a5b', '#6b8e4e', '#a3b18a', '#588157',
+  '#3a5a40', '#344e41', '#9db380',
+] as const;
 
 export async function createProject(
   db: Db,
-  input: { name: string; color?: string; lists?: string[] },
+  input: { name: string; color?: string; acronym?: string; lists?: string[] },
 ): Promise<Project> {
   const existing = await db.select().from(projects).where(eq(projects.name, input.name));
   if (existing.length > 0) {
     throw new MartrelloError('NAME_CONFLICT', `Já existe projeto chamado '${input.name}'`);
   }
 
+  const acronym = (input.acronym ?? suggestAcronym(input.name)).toUpperCase();
+  const acronymConflict = await db.select().from(projects).where(eq(projects.acronym, acronym));
+  if (acronymConflict.length > 0) {
+    throw new MartrelloError('NAME_CONFLICT', `Já existe projeto com o acrônimo '${acronym}'`);
+  }
+
   const maxPos = (await db.select({ m: max(projects.position) }).from(projects))[0]?.m ?? 0;
+  const totalCount = (await db.select({ c: count() }).from(projects))[0]?.c ?? 0;
+  const color = input.color ?? PROJECT_COLOR_PALETTE[Number(totalCount) % PROJECT_COLOR_PALETTE.length];
   const id = ulid();
   const now = Date.now();
   const listNames = input.lists?.length ? input.lists : [...DEFAULT_LISTS];
@@ -26,7 +39,8 @@ export async function createProject(
     tx.insert(projects).values({
       id,
       name: input.name,
-      color: input.color ?? DEFAULT_COLOR,
+      acronym,
+      color,
       position: maxPos + POSITION_STEP,
       createdAt: now,
     }).run();
@@ -103,7 +117,7 @@ export async function getProjectByNameOrId(
 export async function updateProject(
   db: Db,
   id: string,
-  patch: { name?: string; color?: string },
+  patch: { name?: string; color?: string; acronym?: string },
 ): Promise<Project> {
   if (patch.name) {
     const conflict = await db
@@ -115,7 +129,19 @@ export async function updateProject(
     }
   }
 
-  await db.update(projects).set(patch).where(eq(projects.id, id));
+  const normalizedPatch: { name?: string; color?: string; acronym?: string } = { ...patch };
+  if (patch.acronym) {
+    normalizedPatch.acronym = patch.acronym.toUpperCase();
+    const conflict = await db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.acronym, normalizedPatch.acronym), sql`${projects.id} != ${id}`));
+    if (conflict.length > 0) {
+      throw new MartrelloError('NAME_CONFLICT', `Já existe projeto com o acrônimo '${normalizedPatch.acronym}'`);
+    }
+  }
+
+  await db.update(projects).set(normalizedPatch).where(eq(projects.id, id));
 
   const row = (await db.select().from(projects).where(eq(projects.id, id)))[0];
   if (!row) throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto ${id} não existe`);

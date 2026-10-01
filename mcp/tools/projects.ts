@@ -13,6 +13,7 @@ export const projectTools: MartrelloTool[] = [
         required: ['name'],
         properties: {
           name: { type: 'string' },
+          acronym: { type: 'string', description: '3 letras; auto-sugerido se omitido' },
           color: { type: 'string', description: 'hex; default #64748b' },
           lists: { type: 'array', items: { type: 'string' } },
         },
@@ -20,6 +21,7 @@ export const projectTools: MartrelloTool[] = [
     },
     handler: async (input) => createProject(getDb(), {
       name: String(input.name),
+      acronym: input.acronym as string | undefined,
       color: input.color as string | undefined,
       lists: input.lists as string[] | undefined,
     }),
@@ -27,7 +29,7 @@ export const projectTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_update_project',
-      description: 'Atualiza nome e/ou cor de um projeto.',
+      description: 'Atualiza nome, cor e/ou acrônimo de um projeto.',
       inputSchema: {
         type: 'object',
         required: ['project'],
@@ -35,6 +37,7 @@ export const projectTools: MartrelloTool[] = [
           project: { type: 'string', description: 'name ou id' },
           name: { type: 'string' },
           color: { type: 'string' },
+          acronym: { type: 'string' },
         },
       },
     },
@@ -44,6 +47,7 @@ export const projectTools: MartrelloTool[] = [
       return updateProject(db, p.id, {
         name: input.name as string | undefined,
         color: input.color as string | undefined,
+        acronym: input.acronym as string | undefined,
       });
     },
   },
