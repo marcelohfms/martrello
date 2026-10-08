@@ -7,8 +7,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DB_PATH = process.env.DATABASE_URL?.replace(/^file:/, '') ?? './martrello.db';
-const DB_DIR = path.dirname(path.resolve(DB_PATH));
-const DB_BASENAME = path.basename(path.resolve(DB_PATH)); // "martrello.db"
+const DB_DIR = path.dirname(path.resolve(/* turbopackIgnore: true */ DB_PATH));
+const DB_BASENAME = path.basename(path.resolve(/* turbopackIgnore: true */ DB_PATH)); // "martrello.db"
 const DEBOUNCE_MS = 120;
 const KEEPALIVE_MS = 25_000;
 

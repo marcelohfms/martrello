@@ -31,14 +31,14 @@ export function pruneBackups(dir: string, keep: number): string[] {
   if (!Number.isInteger(keep) || keep < 1) throw new Error('keep must be an integer >= 1');
   const all = listBackups(dir);
   const excess = all.slice(0, Math.max(0, all.length - keep));
-  for (const name of excess) rmSync(path.join(dir, name), { force: true });
+  for (const name of excess) rmSync(path.join(/* turbopackIgnore: true */ dir, name), { force: true });
   return excess;
 }
 
 export function latestBackupTime(dir: string): number | null {
   const all = listBackups(dir);
   const newest = all[all.length - 1];
-  return newest ? statSync(path.join(dir, newest)).mtimeMs : null;
+  return newest ? statSync(path.join(/* turbopackIgnore: true */ dir, newest)).mtimeMs : null;
 }
 
 export function isBackupDue(latestMs: number | null, nowMs: number, intervalMs: number = DAY_MS): boolean {
@@ -52,7 +52,7 @@ export async function runBackup(opts: {
   now?: Date;
 }): Promise<{ file: string; removed: string[] }> {
   mkdirSync(opts.backupDir, { recursive: true });
-  const file = path.join(opts.backupDir, backupFileName(opts.now ?? new Date()));
+  const file = path.join(/* turbopackIgnore: true */ opts.backupDir, backupFileName(opts.now ?? new Date()));
   const tmp = `${file}.tmp`;
   const source = new Database(opts.dbPath, { fileMustExist: true });
   try {

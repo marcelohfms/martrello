@@ -7,6 +7,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/marcelohfms/martrello
 
@@ -27,6 +31,7 @@ jobs:
 
   build-push:
     needs: test
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,6 +59,7 @@ jobs:
 
   deploy:
     needs: build-push
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: {}
     steps:
@@ -65,4 +71,4 @@ jobs:
             echo "::warning::EASYPANEL_DEPLOY_WEBHOOK is not set; skipping deploy trigger"
             exit 0
           fi
-          curl -fsS -X POST "$WEBHOOK"
+          curl -fsS --max-time 30 --retry 2 -X POST "$WEBHOOK"

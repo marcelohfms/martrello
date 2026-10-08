@@ -73,10 +73,13 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Drizzle 
 ```bash
 pnpm install
 pnpm db:migrate    # create the SQLite schema in ./martrello.db
+pnpm user:set <username>   # create the login (prompts for a password, min. 12 chars)
 pnpm seed          # create the Inbox project + default labels (idempotent)
 pnpm mcp:build     # bundle the MCP server to mcp/dist/index.js
 pnpm dev           # web UI at http://localhost:3000
 ```
+
+The app requires login: sign in at http://localhost:3000/login with the user created by `pnpm user:set`.
 
 ## MCP server setup (one-time)
 

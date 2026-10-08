@@ -22,9 +22,9 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
    - Environment:
      ```
      MCP_TOKEN=<openssl rand -hex 32>
-     SESSION_COOKIE_SECURE=true
      ```
-     (`DATABASE_URL` and `BACKUP_DIR` already default to `/data/...` in the image.)
+     (`DATABASE_URL`, `BACKUP_DIR` and `SESSION_COOKIE_SECURE=true` are
+     already defaults in the image.)
    - Keep a single replica (SQLite).
 3. **Deploy webhook.** Copy the service's deploy webhook URL into the GitHub
    repo secret `EASYPANEL_DEPLOY_WEBHOOK`.
@@ -34,14 +34,26 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 1. Locally: `sqlite3 <path>/martrello.db ".backup /tmp/martrello-upload.db"`
    (consistent copy, WAL included).
 2. Stop the service in Easypanel.
-3. Copy `/tmp/martrello-upload.db` into the volume as `martrello.db`
+3. Still with the service stopped, remove any leftover WAL/SHM files from the
+   volume directory. If the service already ran (e.g. you created a login on
+   the empty DB), a stale `martrello.db-wal` would be replayed onto the
+   uploaded file and could leave production empty or malformed:
+   ```bash
+   rm -f /etc/easypanel/projects/martrello/<service>/volumes/data/martrello.db-wal \
+         /etc/easypanel/projects/martrello/<service>/volumes/data/martrello.db-shm
+   ```
+4. Copy `/tmp/martrello-upload.db` into the volume as `martrello.db`
    (`scp` to the volume path on the host, e.g.
    `/etc/easypanel/projects/martrello/<service>/volumes/data/`, or Easypanel's
    file browser). Make sure the whole volume directory is owned by uid 1000,
    not just the file, since SQLite also writes WAL/journal files and the app
    creates `/data/backups` there:
    `chown -R 1000:1000 /etc/easypanel/projects/martrello/<service>/volumes/data`.
-4. Start the service. Logs should show `migrations applied` then `Ready`.
+5. Start the service. Logs should show `migrations applied` then `Ready`.
+6. Create the login (see below), then take a backup right away from the
+   service Console: `node dist/scripts/backup.js`. The scheduler only backs up
+   when the newest backup is older than 24 h, so a backup of the empty
+   pre-upload DB would otherwise delay the first real backup by up to a day.
 
 ## Creating / changing the login
 
@@ -73,4 +85,11 @@ the newest 14 (`BACKUP_KEEP`). Manual backup from the console:
 
 ## Rollback
 
-Change the service image tag to a previous `sha-<commit>` and deploy.
+Change the service image tag to a previous `sha-<commit>` and deploy. When
+done, switch the image tag back to `latest`, otherwise later webhook deploys
+keep redeploying the pinned tag.
+
+Migrations only run forward, so rolling back across a migration may not work.
+If needed, restore from `/data/backups`: stop the service, remove
+`martrello.db-wal` and `martrello.db-shm` from the volume directory, copy the
+chosen backup over `martrello.db`, then start the service.
