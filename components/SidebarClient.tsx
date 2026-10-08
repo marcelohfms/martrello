@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
+import { logoutAction } from '@/app/login/actions';
 
 type Project = {
   id: string;
@@ -271,13 +272,23 @@ export function SidebarClient({ projects, sprintName }: Props) {
           })}
         </nav>
 
-        {/* Footer hint */}
-        <div className="
-          px-4 py-2.5 border-t border-[var(--color-mt-line-subtle)]
-          text-[11px] text-[var(--color-mt-muted)] select-none
-        ">
-          Claude · MCP
-        </div>
+        {/* Footer: logout */}
+        <form
+          action={logoutAction}
+          className="px-2 py-1.5 border-t border-[var(--color-mt-line-subtle)]"
+        >
+          <button
+            type="submit"
+            className="
+              w-full text-left px-2 py-1.5 rounded-[4px]
+              text-[12px] text-[var(--color-mt-muted)]
+              hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
+              transition-colors duration-[120ms]
+            "
+          >
+            Sair
+          </button>
+        </form>
       </aside>
     </>
   );
