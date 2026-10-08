@@ -73,10 +73,13 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Drizzle 
 ```bash
 pnpm install
 pnpm db:migrate    # create the SQLite schema in ./martrello.db
+pnpm user:set <username>   # create the login (prompts for a password, min. 12 chars)
 pnpm seed          # create the Inbox project + default labels (idempotent)
 pnpm mcp:build     # bundle the MCP server to mcp/dist/index.js
 pnpm dev           # web UI at http://localhost:3000
 ```
+
+The app requires login: sign in at http://localhost:3000/login with the user created by `pnpm user:set`.
 
 ## MCP server setup (one-time)
 
@@ -186,3 +189,9 @@ Design specs and implementation plans live in `docs/superpowers/`:
 - [v1 design](docs/superpowers/specs/2026-05-26-martrello-design.md) · [v1 plan](docs/superpowers/plans/2026-05-26-martrello-v1.md)
 - [Deadline picker](docs/superpowers/specs/2026-05-27-deadline-date-picker-design.md)
 - [Realtime SSE](docs/superpowers/specs/2026-05-28-realtime-sse-design.md)
+
+## Deploy
+
+Production runs on Easypanel from the `ghcr.io/marcelohfms/martrello` image,
+behind a single-user login, with the MCP server exposed at `/api/mcp`
+(bearer token). See [docs/deploy.md](docs/deploy.md).

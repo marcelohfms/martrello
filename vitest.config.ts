@@ -4,7 +4,7 @@ import path from 'node:path';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'lib/**/*.test.ts', 'mcp/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'lib/**/*.test.ts', 'mcp/**/*.test.ts', 'app/**/*.test.ts'],
     globals: false,
   },
   resolve: {

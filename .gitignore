@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+tmp/
 
 # debug
 npm-debug.log*
@@ -45,12 +46,14 @@ martrello.db
 martrello.db-journal
 martrello.db-wal
 martrello.db-shm
+/backups/
 
 # pnpm store
 .pnpm-store/
 
 # mcp build artifacts
 mcp/dist/
+/dist/
 
 # brainstorming companion
 .superpowers/

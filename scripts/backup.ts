@@ -1,20 +1,18 @@
-import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
-import { homedir } from 'node:os';
+// scripts/backup.ts — manual backup. BACKUP_DIR (default ./backups), BACKUP_KEEP (default 14).
 import path from 'node:path';
+import { DB_PATH } from '@/lib/db/client';
+import { parseKeep, runBackup } from '@/lib/backup';
 
-const SRC = path.resolve('./martrello.db');
-const DST_DIR = path.join(
-  homedir(),
-  'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'martrello', 'backups',
-);
-
-if (!existsSync(SRC)) {
-  console.error(`No DB at ${SRC}; run pnpm db:migrate first.`);
-  process.exit(1);
-}
-
-mkdirSync(DST_DIR, { recursive: true });
-const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16);
-const dst = path.join(DST_DIR, `martrello-${stamp}.db`);
-copyFileSync(SRC, dst);
-console.log(`backup → ${dst}`);
+runBackup({
+  dbPath: path.resolve(DB_PATH),
+  backupDir: path.resolve(process.env.BACKUP_DIR || './backups'),
+  keep: parseKeep(process.env.BACKUP_KEEP),
+})
+  .then(({ file, removed }) => {
+    console.log(`backup → ${file}`);
+    if (removed.length) console.log(`removidos: ${removed.join(', ')}`);
+  })
+  .catch((e) => {
+    console.error(`backup falhou: ${(e as Error).message}`);
+    process.exit(1);
+  });
