@@ -46,6 +46,7 @@ martrello.db
 martrello.db-journal
 martrello.db-wal
 martrello.db-shm
+/backups/
 
 # pnpm store
 .pnpm-store/
