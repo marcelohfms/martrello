@@ -32,7 +32,8 @@ hospedar o app na VPS Hostinger do usuário, que roda o Easypanel, com:
 - Script `pnpm user:set <username>` para criar o usuário ou trocar a senha.
 - Rota `/api/mcp` com transporte Streamable HTTP (stateless) e autenticação
   por bearer token.
-- Backup diário do banco em `/data/backups`, mantendo os últimos 14.
+- Backup diário do banco em `/data/backups`, mantendo os últimos 14,
+  agendado dentro do próprio app.
 - Runbook de configuração do Easypanel e da migração inicial dos dados
   (`docs/deploy.md`).
 
@@ -59,7 +60,7 @@ hospedar o app na VPS Hostinger do usuário, que roda o Easypanel, com:
    `next.config.ts`).
 3. **runtime:** `node:24-bookworm-slim`, usuário não-root `node`, copia
    `.next/standalone`, `.next/static`, `public`, `lib/db/migrations` e um
-   bundle esbuild do script de migração (`dist/migrate.js`), além de
+   bundle esbuild do script de migração (`dist/scripts/migrate.js`), além de
    `scripts/start.sh`. `ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0`
    e `EXPOSE 3000`.
 
@@ -78,7 +79,7 @@ usar `outputFileTracingIncludes` no `next.config.ts`. A verificação é o
 ```sh
 #!/bin/sh
 set -e
-node dist/migrate.js
+node dist/scripts/migrate.js
 exec node server.js
 ```
 
@@ -130,12 +131,20 @@ nova (`users`/`sessions`), e então rodar `user:set` pelo console do container.
 
 ### 3.5 Backup
 
-`scripts/backup.ts` passa a aceitar destino por variável (`BACKUP_DIR`,
-padrão `./backups`) e retenção (`BACKUP_KEEP`, padrão 14), usando o
-`db.backup()` do better-sqlite3 (backup online e consistente com WAL).
-Empacotado como `dist/backup.js`. No Easypanel, uma tarefa agendada
-(Cron, diária às 03:00) executa `node dist/backup.js` com
-`BACKUP_DIR=/data/backups`.
+A lógica de backup vai para `lib/backup.ts` e usa o `db.backup()` do
+better-sqlite3 (backup online e consistente com WAL). Destino em
+`BACKUP_DIR` e retenção em `BACKUP_KEEP` (padrão 14). Só arquivos
+`martrello-*.db` contam para a retenção.
+
+O agendamento fica dentro do próprio app, sem depender de cron do Easypanel:
+`instrumentation.ts` (hook `register()` do Next, executado uma vez na subida
+do servidor Node) inicia um agendador quando `BACKUP_DIR` está definido. A
+cada hora ele verifica se o último backup tem mais de 24 h e, se tiver, cria
+um novo. Na imagem Docker, `BACKUP_DIR=/data/backups` já vem definido. Em
+desenvolvimento local, sem a variável, o agendador fica desligado.
+`scripts/backup.ts` continua como CLI para backup manual
+(`node dist/scripts/backup.js` no container, `pnpm backup` localmente, com
+padrão `./backups`).
 
 ## 4. Login
 
@@ -206,10 +215,12 @@ actions. O `/api/stream` e o `/api/card/[id]` são cobertos pelo proxy (o
 ### 4.5 Script `user:set`
 
 `scripts/user-set.ts <username>`: pede a senha duas vezes no TTY sem eco
-(`readline` com saída silenciada), exige no mínimo 12 caracteres e faz upsert
+(`readline` com saída silenciada). Quando o stdin não é um TTY (senha via
+pipe, para automação e testes), lê a senha uma vez do stdin. Exige no mínimo
+12 caracteres e faz upsert
 em `users`. Ao trocar a senha, apaga todas as sessões daquele usuário.
-Empacotado como `dist/user-set.js`. Na VPS, roda pelo console do container:
-`node dist/user-set.js marcelo`. Localmente: `pnpm user:set marcelo`.
+Empacotado como `dist/scripts/user-set.js`. Na VPS, roda pelo console do container:
+`node dist/scripts/user-set.js marcelo`. Localmente: `pnpm user:set marcelo`.
 
 ## 5. MCP remoto
 
