@@ -11,7 +11,10 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
    `read:packages`.
 2. **Easypanel project/service.** Create project `martrello` → service **App**:
    - Source: **Docker Image** `ghcr.io/marcelohfms/martrello:latest`.
-   - Mounts: **Volume** at `/data`.
+   - Mounts: **Volume** at `/data`. If the container log shows
+     `ERRO: /data não é gravável`, run
+     `chown -R 1000:1000 /etc/easypanel/projects/martrello/<service>/volumes/data`
+     on the host and restart the service.
    - Domains: your subdomain → port `3000`, HTTPS on. Do not add a **Ports**
      mapping for 3000 on the host: the app must only be reachable through
      Easypanel's proxy, because the login rate limit trusts its
@@ -34,8 +37,10 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 3. Copy `/tmp/martrello-upload.db` into the volume as `martrello.db`
    (`scp` to the volume path on the host, e.g.
    `/etc/easypanel/projects/martrello/<service>/volumes/data/`, or Easypanel's
-   file browser). Make sure it is owned by uid 1000:
-   `chown 1000:1000 martrello.db`.
+   file browser). Make sure the whole volume directory is owned by uid 1000,
+   not just the file, since SQLite also writes WAL/journal files and the app
+   creates `/data/backups` there:
+   `chown -R 1000:1000 /etc/easypanel/projects/martrello/<service>/volumes/data`.
 4. Start the service. Logs should show `migrations applied` then `Ready`.
 
 ## Creating / changing the login

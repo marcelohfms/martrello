@@ -5,9 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
+permissions: {}
 
 env:
   IMAGE: ghcr.io/marcelohfms/martrello
@@ -15,6 +13,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,6 +28,9 @@ jobs:
   build-push:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -52,6 +55,7 @@ jobs:
   deploy:
     needs: build-push
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Trigger Easypanel deploy
         env:
