@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { DB_PATH } from '@/lib/db/client';
-import { isBackupDue, latestBackupTime, runBackup } from './backup';
+import { isBackupDue, latestBackupTime, parseKeep, runBackup } from './backup';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -8,7 +8,7 @@ export function startBackupScheduler(): void {
   const backupDir = process.env.BACKUP_DIR;
   if (!backupDir) return;
   const dir = path.resolve(backupDir);
-  const keep = Number(process.env.BACKUP_KEEP ?? 14);
+  const keep = parseKeep(process.env.BACKUP_KEEP);
 
   const tick = async () => {
     try {

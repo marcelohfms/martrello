@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { backupFileName, listBackups, pruneBackups, runBackup, isBackupDue } from './backup';
+import { backupFileName, listBackups, pruneBackups, runBackup, isBackupDue, parseKeep } from './backup';
 
 let dir: string;
 beforeEach(() => {
@@ -53,6 +53,48 @@ describe('backup', () => {
     ]);
     expect(listBackups(dir)).toHaveLength(14);
     expect(readdirSync(dir)).toEqual(expect.arrayContaining(['notes.txt', 'other.db']));
+  });
+
+  it('parseKeep falls back to 14 for empty, zero, negative and non-numeric values', () => {
+    expect(parseKeep(undefined)).toBe(14);
+    expect(parseKeep('')).toBe(14);
+    expect(parseKeep('0')).toBe(14);
+    expect(parseKeep('-3')).toBe(14);
+    expect(parseKeep('abc')).toBe(14);
+    expect(parseKeep('2.5')).toBe(14);
+    expect(parseKeep(' 7 ')).toBe(7);
+  });
+
+  it('pruneBackups refuses keep < 1', () => {
+    for (let i = 1; i <= 3; i++) {
+      writeFileSync(path.join(dir, backupFileName(new Date(Date.UTC(2026, 0, i)))), '');
+    }
+    expect(() => pruneBackups(dir, 0)).toThrow();
+    expect(listBackups(dir)).toHaveLength(3);
+  });
+
+  it('failed backup leaves no file behind', async () => {
+    const out = path.join(dir, 'backups');
+    await expect(
+      runBackup({ dbPath: path.join(dir, 'missing.db'), backupDir: out, keep: 14 }),
+    ).rejects.toThrow();
+    const leftovers = existsSync(out) ? readdirSync(out) : [];
+    expect(leftovers.filter((n) => n.startsWith('martrello-'))).toEqual([]);
+    expect(leftovers.filter((n) => n.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('successful backup leaves no .tmp file', async () => {
+    const src = path.join(dir, 'live.db');
+    const live = new Database(src);
+    live.exec('CREATE TABLE t (v TEXT);');
+    live.close();
+
+    const out = path.join(dir, 'backups');
+    const { file } = await runBackup({ dbPath: src, backupDir: out, keep: 14 });
+
+    const entries = readdirSync(out);
+    expect(entries).toEqual([path.basename(file)]);
+    expect(entries.filter((n) => n.endsWith('.tmp'))).toEqual([]);
   });
 
   it('isBackupDue: no backup yet, stale, and fresh', () => {

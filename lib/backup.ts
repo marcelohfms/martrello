@@ -1,10 +1,17 @@
 import Database from 'better-sqlite3';
-import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const PREFIX = 'martrello-';
 const SUFFIX = '.db';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_KEEP = 14;
+
+export function parseKeep(raw: string | undefined): number {
+  const trimmed = raw?.trim() ?? '';
+  const n = Number(trimmed);
+  return trimmed !== '' && Number.isInteger(n) && n >= 1 ? n : DEFAULT_KEEP;
+}
 
 export function backupFileName(date: Date): string {
   return `${PREFIX}${date.toISOString().replace(/[:.]/g, '-')}${SUFFIX}`;
@@ -21,6 +28,7 @@ export function listBackups(dir: string): string[] {
 }
 
 export function pruneBackups(dir: string, keep: number): string[] {
+  if (!Number.isInteger(keep) || keep < 1) throw new Error('keep must be an integer >= 1');
   const all = listBackups(dir);
   const excess = all.slice(0, Math.max(0, all.length - keep));
   for (const name of excess) rmSync(path.join(dir, name), { force: true });
@@ -45,9 +53,14 @@ export async function runBackup(opts: {
 }): Promise<{ file: string; removed: string[] }> {
   mkdirSync(opts.backupDir, { recursive: true });
   const file = path.join(opts.backupDir, backupFileName(opts.now ?? new Date()));
+  const tmp = `${file}.tmp`;
   const source = new Database(opts.dbPath, { fileMustExist: true });
   try {
-    await source.backup(file);
+    await source.backup(tmp);
+    renameSync(tmp, file);
+  } catch (e) {
+    rmSync(tmp, { force: true });
+    throw e;
   } finally {
     source.close();
   }
