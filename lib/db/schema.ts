@@ -105,6 +105,26 @@ export const sprintSlots = sqliteTable(
   }),
 );
 
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    idHash: text('id_hash').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (t) => ({
+    byUser: index('sessions_by_user').on(t.userId),
+  }),
+);
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type List = typeof lists.$inferSelect;
@@ -114,3 +134,5 @@ export type CardDependency = typeof cardDependencies.$inferSelect;
 export type Sprint = typeof sprints.$inferSelect;
 export type SprintSlot = typeof sprintSlots.$inferSelect;
 export type SprintList = 'backlog' | 'doing' | 'done';
+export type User = typeof users.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
