@@ -53,6 +53,7 @@ martrello.db-shm
 
 # mcp build artifacts
 mcp/dist/
+/dist/
 
 # brainstorming companion
 .superpowers/
