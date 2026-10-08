@@ -203,9 +203,10 @@ actions. O `/api/stream` e o `/api/card/[id]` são cobertos pelo proxy (o
   tempo de resposta. Em caso de sucesso: cria a sessão, envia o cookie, zera o
   rate limit e redireciona para `/`. Em caso de falha: mensagem genérica
   "Usuário ou senha inválidos" (ou "Muitas tentativas. Tente de novo em N
-  minutos" quando bloqueado). O IP vem de `x-forwarded-for` (primeiro valor,
-  já que o Traefik do Easypanel define esse header), com fallback para
-  `x-real-ip` e depois `unknown`.
+  minutos" quando bloqueado). O IP vem do **último** valor de
+  `x-forwarded-for` (o que o Traefik do Easypanel anexa com o endereço que ele
+  viu; os valores à esquerda podem ser forjados pelo cliente), com fallback
+  para `x-real-ip` e depois `unknown`.
 - Visual alinhado ao app: fundo escuro, tokens `--color-mt-*`, wordmark
   "martrello".
 - Logout: botão "Sair" no rodapé da sidebar (`SidebarClient.tsx`, no lugar do
@@ -306,3 +307,7 @@ sem recarregar.
   Easypanel e rodar de novo o `claude mcp add`. Sem expiração automática.
 - **`x-forwarded-for` confiável:** só porque o app fica sempre atrás do
   Traefik do Easypanel. A porta 3000 não é publicada diretamente no host.
+  Usar o valor mais à direita assume exatamente um proxy (Traefik). Se um CDN
+  (ex.: Cloudflare com proxy ligado) for colocado na frente, todos os clientes
+  aparecem com o IP do CDN e compartilham o mesmo limite de tentativas; nesse
+  caso, passar a ler o header próprio do CDN.
