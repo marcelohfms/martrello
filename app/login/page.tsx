@@ -5,7 +5,15 @@ import { LoginForm } from './LoginForm';
 export default async function LoginPage() {
   if (await getCurrentUser()) redirect('/');
   return (
-    <main className="flex-1 min-h-dvh flex items-center justify-center px-4 bg-[var(--color-mt-sidebar-bg)]">
+    <main
+      className="relative flex min-h-dvh flex-1 items-center justify-center bg-mt-rail bg-cover bg-center px-4"
+      style={{ backgroundImage: 'url(/brand/bg-gradient-dark.webp)' }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30"
+        style={{ backgroundImage: 'url(/brand/bg-grid-dark.webp)' }}
+        aria-hidden="true"
+      />
       <LoginForm />
     </main>
   );

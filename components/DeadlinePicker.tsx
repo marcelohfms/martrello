@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { X } from 'lucide-react';
 import 'react-day-picker/style.css';
 import { todayISO, tomorrowISO, nextWeekISO, nextMonthISO } from '@/lib/core/date-shortcuts';
 
@@ -11,8 +12,7 @@ type Props = {
   onChange: (next: string | null) => void;
 };
 
-const BTN_CLASS =
-  'bg-white text-slate-900 text-xs px-2.5 py-1.5 rounded border border-slate-200 font-medium hover:bg-slate-100 transition';
+const SHORTCUT_CLASS = 'btn btn-secondary !px-2.5 !py-1 !text-[12px]';
 
 export function DeadlinePicker({ value, onChange }: Props) {
   const selected = value ? parseISO(value) : undefined;
@@ -32,10 +32,10 @@ export function DeadlinePicker({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        <button type="button" className={BTN_CLASS} onClick={() => apply(todayISO())}>Hoje</button>
-        <button type="button" className={BTN_CLASS} onClick={() => apply(tomorrowISO())}>Amanhã</button>
-        <button type="button" className={BTN_CLASS} onClick={() => apply(nextWeekISO())}>Próxima semana</button>
-        <button type="button" className={BTN_CLASS} onClick={() => apply(nextMonthISO())}>Próximo mês</button>
+        <button type="button" className={SHORTCUT_CLASS} onClick={() => apply(todayISO())}>Hoje</button>
+        <button type="button" className={SHORTCUT_CLASS} onClick={() => apply(tomorrowISO())}>Amanhã</button>
+        <button type="button" className={SHORTCUT_CLASS} onClick={() => apply(nextWeekISO())}>Próxima semana</button>
+        <button type="button" className={SHORTCUT_CLASS} onClick={() => apply(nextMonthISO())}>Próximo mês</button>
       </div>
       <DayPicker
         mode="single"
@@ -46,13 +46,16 @@ export function DeadlinePicker({ value, onChange }: Props) {
         onSelect={(d) => { if (d) apply(d.toISOString().slice(0, 10)); }}
         showOutsideDays
       />
-      <button
-        type="button"
-        onClick={() => onChange(null)}
-        className={`text-xs text-rose-400 hover:text-rose-300 transition ${value ? '' : 'hidden'}`}
-      >
-        × Remover prazo
-      </button>
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="btn btn-danger-ghost !px-2 !py-1 !text-[12px]"
+        >
+          <X size={13} strokeWidth={2} aria-hidden="true" />
+          Remover prazo
+        </button>
+      )}
     </div>
   );
 }

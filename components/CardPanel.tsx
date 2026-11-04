@@ -1,15 +1,32 @@
 // components/CardPanel.tsx
 'use client';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import useSWR from 'swr';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Archive, Check, Undo2, X, Zap } from 'lucide-react';
 import { updateCardAction, toggleLabelAction, archiveCardAction, addToSprintAction, removeFromSprintAction, addDependencyAction, removeDependencyAction } from '@/app/actions';
 import { DeadlinePicker } from './DeadlinePicker';
+import { sprintToggleLabel } from './SprintToggle';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 type Props = { cardId: string; onClose: () => void };
+
+const PANEL_CLASS =
+  'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-mt-line bg-mt-card shadow-raised sm:w-[440px]';
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <div className="label-caps mb-2 text-mt-muted">{children}</div>;
+}
+
+function CloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button type="button" onClick={onClose} aria-label="Fechar painel" className="btn btn-ghost !p-1.5 shrink-0">
+      <X size={16} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
+}
 
 export function CardPanel({ cardId, onClose }: Props) {
   const { data, mutate } = useSWR(`/api/card/${cardId}`, fetcher, { refreshInterval: 3000, revalidateOnFocus: true });
@@ -19,7 +36,35 @@ export function CardPanel({ cardId, onClose }: Props) {
   const [pending, start] = useTransition();
   const [depError, setDepError] = useState<string | null>(null);
 
-  if (!data) return null;
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      // Escape inside a field cancels that edit first; the panel closes on the next press.
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (!data?.card) {
+    return (
+      <aside aria-label="Carregando card" aria-busy="true" className={PANEL_CLASS}>
+        <header className="flex items-center justify-between gap-3 border-b border-mt-line px-5 py-3">
+          <div className="h-5 w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-mt-list" />
+          <CloseButton onClose={onClose} />
+        </header>
+        <div className="space-y-3 p-5">
+          <div className="h-3 w-24 animate-pulse rounded-[var(--radius-sm)] bg-mt-list" />
+          <div className="h-24 animate-pulse rounded-[var(--radius-md)] bg-mt-list" />
+          <div className="h-3 w-16 animate-pulse rounded-[var(--radius-sm)] bg-mt-list" />
+          <div className="h-48 animate-pulse rounded-[var(--radius-md)] bg-mt-list" />
+        </div>
+      </aside>
+    );
+  }
+
   const card = data.card as {
     id: string;
     title: string;
@@ -28,6 +73,7 @@ export function CardPanel({ cardId, onClose }: Props) {
     labels: Array<{ name: string; color: string }>;
     dependsOn: Array<{ id: string; title: string; isDone: boolean }>;
   };
+  const inSprint = data.inSprint as boolean | null;
   const allLabels = data.allLabels as Array<{ name: string; color: string }>;
   const presentNames = new Set(card.labels.map((l) => l.name));
   const dependsOn = card.dependsOn as Array<{ id: string; title: string; isDone: boolean }>;
@@ -52,51 +98,56 @@ export function CardPanel({ cardId, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-[#0a1622] border-l border-[var(--color-mt-line)] z-40 flex flex-col">
-      <header className="px-4 py-3 border-b border-[var(--color-mt-line)] flex items-center justify-between">
+    <aside aria-label="Detalhes do card" className={PANEL_CLASS}>
+      <header className="flex items-center justify-between gap-3 border-b border-mt-line px-5 py-3">
         <input
           value={titleDraft ?? card.title}
           onChange={(e) => setTitleDraft(e.target.value)}
           onBlur={saveTitle}
           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setTitleDraft(null); }}
-          className="bg-transparent text-sm font-semibold w-full mr-2 outline-none"
+          aria-label="Título do card"
+          className="w-full min-w-0 rounded-[var(--radius-sm)] bg-transparent px-1 py-0.5 text-[16px] font-bold tracking-[-0.01em] text-mt-heading hover:bg-mt-bg"
         />
-        <button type="button" onClick={onClose} className="text-xs text-[var(--color-mt-muted)]">fechar</button>
+        <CloseButton onClose={onClose} />
       </header>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+
+      <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
         <section>
-          <div className="text-xs text-[var(--color-mt-muted)] mb-1">Descrição</div>
+          <SectionLabel>Descrição</SectionLabel>
           {editingDesc ? (
             <div className="space-y-2">
               <textarea
                 value={descDraft}
                 onChange={(e) => setDescDraft(e.target.value)}
-                className="w-full h-40 bg-[var(--color-mt-card)] p-2 rounded text-xs"
+                aria-label="Descrição do card"
+                className="field h-40 resize-y"
               />
-              <div className="flex gap-2">
-                <button type="button" disabled={pending} onClick={saveDesc} className="text-xs bg-[var(--color-mt-accent)] px-2 py-1 rounded">salvar</button>
-                <button type="button" onClick={() => setEditingDesc(false)} className="text-xs">cancelar</button>
+              <div className="flex gap-1.5">
+                <button type="button" disabled={pending} onClick={saveDesc} className="btn btn-primary">
+                  {pending ? 'Salvando…' : 'Salvar'}
+                </button>
+                <button type="button" onClick={() => setEditingDesc(false)} className="btn btn-ghost">Cancelar</button>
               </div>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => { setDescDraft(card.description ?? ''); setEditingDesc(true); }}
-              className="w-full text-left bg-[var(--color-mt-card)] p-3 rounded text-xs leading-relaxed"
+              className="w-full cursor-pointer rounded-[var(--radius-md)] border border-mt-line bg-mt-bg p-3 text-left transition-colors duration-[var(--duration-fast)] ease-out hover:border-mt-line-strong"
             >
               {card.description ? (
-                <div className="prose prose-invert prose-sm max-w-none">
+                <div className="md-body">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{card.description}</ReactMarkdown>
                 </div>
               ) : (
-                <span className="text-[var(--color-mt-muted)]">adicionar descrição</span>
+                <span className="text-[13px] text-mt-muted">Adicionar descrição</span>
               )}
             </button>
           )}
         </section>
 
         <section>
-          <div className="text-xs text-[var(--color-mt-muted)] mb-1">Prazo</div>
+          <SectionLabel>Prazo</SectionLabel>
           <DeadlinePicker
             value={card.dueDate}
             onChange={(next) =>
@@ -109,45 +160,60 @@ export function CardPanel({ cardId, onClose }: Props) {
         </section>
 
         <section>
-          <div className="text-xs text-[var(--color-mt-muted)] mb-1">Labels</div>
-          <div className="flex flex-wrap gap-1.5">
-            {allLabels.map((l) => {
-              const on = presentNames.has(l.name);
-              return (
-                <button
-                  type="button"
-                  key={l.name}
-                  onClick={() => start(async () => { await toggleLabelAction(card.id, l.name, on); mutate(); })}
-                  className={`text-[10px] px-2 py-1 rounded ${on ? '' : 'opacity-40'}`}
-                  style={{ background: l.color }}
-                >
-                  {l.name}
-                </button>
-              );
-            })}
-          </div>
+          <SectionLabel>Labels</SectionLabel>
+          {allLabels.length === 0 ? (
+            <p className="text-[13px] text-mt-muted">Nenhuma label criada.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {allLabels.map((l) => {
+                const on = presentNames.has(l.name);
+                return (
+                  <button
+                    type="button"
+                    key={l.name}
+                    aria-pressed={on}
+                    onClick={() => start(async () => { await toggleLabelAction(card.id, l.name, on); mutate(); })}
+                    className={`
+                      inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium
+                      transition-colors duration-[var(--duration-fast)] ease-out
+                      ${on
+                        ? 'border-ax-green-950 bg-ax-green-950 text-ax-greige-400'
+                        : 'border-mt-line-strong text-mt-text hover:bg-mt-list'
+                      }
+                    `}
+                  >
+                    {on
+                      ? <Check size={12} strokeWidth={2.5} aria-hidden="true" />
+                      : <span className="size-2 rounded-full" style={{ background: l.color }} aria-hidden="true" />
+                    }
+                    {l.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section>
-          <div className="text-xs text-[var(--color-mt-muted)] mb-1">Depende de</div>
+          <SectionLabel>Depende de</SectionLabel>
           {dependsOn.length === 0 ? (
-            <p className="text-xs text-[var(--color-mt-muted)]">nenhuma dependência</p>
+            <p className="mb-2 text-[13px] text-mt-muted">Nenhuma dependência.</p>
           ) : (
-            <ul className="space-y-1 mb-2">
+            <ul className="mb-2 space-y-1">
               {dependsOn.map((d) => (
                 <li
                   key={d.id}
-                  className="flex items-center justify-between gap-2 text-xs bg-[var(--color-mt-card)] px-2 py-1 rounded"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-mt-line bg-mt-bg py-1 pl-3 pr-1 text-[13px]"
                 >
-                  <span className={d.isDone ? 'text-[var(--color-mt-muted)] line-through' : 'text-[var(--color-mt-text)]'}>
+                  <span className={d.isDone ? 'text-mt-muted line-through' : 'text-mt-text'}>
                     {d.title}
                   </span>
                   <button
                     type="button"
                     onClick={() => start(async () => { await removeDependencyAction(card.id, d.id); mutate(); })}
-                    className="text-[var(--color-mt-danger)] shrink-0"
+                    className="btn btn-danger-ghost !px-2 !py-1 !text-[12px] shrink-0"
                   >
-                    remover
+                    Remover
                   </button>
                 </li>
               ))}
@@ -155,6 +221,7 @@ export function CardPanel({ cardId, onClose }: Props) {
           )}
           <select
             value=""
+            aria-label="Adicionar pré-requisito"
             onChange={(e) => {
               const blockerId = e.target.value;
               if (!blockerId) return;
@@ -168,30 +235,39 @@ export function CardPanel({ cardId, onClose }: Props) {
                 }
               });
             }}
-            className="w-full text-xs bg-[var(--color-mt-card)] p-1.5 rounded text-[var(--color-mt-text)]"
+            className="field cursor-pointer"
           >
-            <option value="">+ adicionar pré-requisito...</option>
+            <option value="">Adicionar pré-requisito…</option>
             {candidateCards
               .filter((c) => !linkedIds.has(c.id))
               .map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
           </select>
-          {depError && <p className="text-xs text-[var(--color-mt-danger)] mt-1">{depError}</p>}
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <button type="button" onClick={() => start(async () => { await addToSprintAction(card.id); mutate(); })} className="text-xs text-left text-[var(--color-mt-muted)] hover:text-[var(--color-mt-text)]">
-            + adicionar ao Sprint
-          </button>
-          <button type="button" onClick={() => start(async () => { await removeFromSprintAction(card.id); mutate(); })} className="text-xs text-left text-[var(--color-mt-muted)] hover:text-[var(--color-mt-text)]">
-            − tirar do Sprint
-          </button>
-          <button type="button" onClick={() => start(async () => { await archiveCardAction(card.id); onClose(); })} className="text-xs text-left text-rose-400">
-            arquivar
-          </button>
+          {depError && <p role="alert" className="mt-1.5 text-[13px] text-mt-danger">{depError}</p>}
         </section>
       </div>
-    </div>
+
+      <footer className="flex flex-wrap items-center gap-1 border-t border-mt-line px-3 py-2">
+        {inSprint !== null && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => start(async () => {
+              await (inSprint ? removeFromSprintAction(card.id) : addToSprintAction(card.id));
+              mutate();
+            })}
+            className="btn btn-ghost"
+          >
+            {inSprint ? <Undo2 size={15} strokeWidth={2} aria-hidden="true" /> : <Zap size={15} strokeWidth={2} aria-hidden="true" />}
+            {sprintToggleLabel(inSprint)}
+          </button>
+        )}
+        <button type="button" onClick={() => start(async () => { await archiveCardAction(card.id); onClose(); })} className="btn btn-danger-ghost ml-auto">
+          <Archive size={14} strokeWidth={2} aria-hidden="true" />
+          Arquivar
+        </button>
+      </footer>
+    </aside>
   );
 }

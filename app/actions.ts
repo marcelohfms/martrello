@@ -45,13 +45,14 @@ export async function moveInSprintAction(cardId: string, sprintList: 'backlog' |
 export async function removeFromSprintAction(cardId: string) {
   await requireUser();
   await removeFromSprint(getDb(), cardId);
-  revalidatePath('/sprint');
+  // The whole app: project boards show the card's sprint button too.
+  revalidatePath('/', 'layout');
 }
 
 export async function addToSprintAction(cardId: string) {
   await requireUser();
   await addToSprint(getDb(), cardId);
-  revalidatePath('/sprint');
+  revalidatePath('/', 'layout');
 }
 
 export async function startSprintAction(name?: string) {

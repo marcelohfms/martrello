@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { List } from './List';
-import type { CardData } from './Card';
+import { Card, type CardData } from './Card';
 import { moveCardAction, moveInSprintAction } from '@/app/actions';
 
 export type Column = {
@@ -20,6 +20,7 @@ type Props = {
 
 export function Board({ columns, variant = 'project', onCardClick }: Props) {
   const [cols, setCols] = useState(columns);
+  const [draggingCard, setDraggingCard] = useState<CardData | null>(null);
   useEffect(() => {
     setCols(columns);
   }, [columns]);
@@ -31,7 +32,13 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
     return cols.find((col) => col.cards.some((c) => c.id === id));
   }
 
+  function onDragStart(e: DragStartEvent) {
+    const col = findCardColumn(String(e.active.id));
+    setDraggingCard(col?.cards.find((c) => c.id === e.active.id) ?? null);
+  }
+
   function onDragEnd(e: DragEndEvent) {
+    setDraggingCard(null);
     const { active, over } = e;
     if (!over) return;
     const fromCol = findCardColumn(String(active.id));
@@ -75,7 +82,13 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
   }
 
   return (
-    <DndContext id={`martrello-${variant}`} sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext
+      id={`martrello-${variant}`}
+      sensors={sensors}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setDraggingCard(null)}
+    >
       {/*
         board-scroll: custom class in globals.css for smooth horizontal scroll
         + touch scrolling. padding-bottom leaves room for scrollbar.
@@ -83,7 +96,7 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
       <div
         role="region"
         aria-label="Board de tarefas"
-        className="board-scroll flex gap-3 p-4 pb-3 h-full"
+        className="board-scroll flex gap-3 p-4 pb-3 h-full md:px-6"
         style={{ paddingLeft: 'max(16px, env(safe-area-inset-left))' }}
       >
         {cols.map((c) => (
@@ -100,6 +113,10 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
         {/* trailing spacer so last column doesn't cut off on mobile */}
         <div className="w-2 shrink-0" aria-hidden="true" />
       </div>
+      {/* Columns scroll on their own, so the moving card must render outside them. */}
+      <DragOverlay dropAnimation={{ duration: 180, easing: 'ease-out' }}>
+        {draggingCard ? <Card card={draggingCard} variant={variant} lifted /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }

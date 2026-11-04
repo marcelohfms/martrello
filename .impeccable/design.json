@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-04T17:30:00.000Z",
+  "title": "Design System: martrello",
+  "extensions": {
+    "colorMeta": {
+      "forest-green": { "role": "primary", "displayName": "Forest Green", "tonalRamp": ["#002b0f", "#23512a", "#388143", "#5bb168"] },
+      "deep-green": { "role": "primary", "displayName": "Deep Green", "tonalRamp": ["#002b0f", "#23512a", "#388143", "#5bb168"] },
+      "working-green": { "role": "primary", "displayName": "Working Green", "tonalRamp": ["#002b0f", "#23512a", "#388143", "#5bb168"] },
+      "signal-green": { "role": "primary", "displayName": "Signal Green", "tonalRamp": ["#002b0f", "#23512a", "#388143", "#5bb168"] },
+      "warm-paper": { "role": "neutral", "displayName": "Warm Paper" },
+      "light-greige": { "role": "neutral", "displayName": "Light Greige" },
+      "greige": { "role": "neutral", "displayName": "Greige" },
+      "hairline": { "role": "neutral", "displayName": "Hairline" },
+      "field-line": { "role": "neutral", "displayName": "Field Line" },
+      "card-white": { "role": "neutral", "displayName": "Card White" },
+      "ink": { "role": "neutral", "displayName": "Ink" },
+      "warm-muted": { "role": "neutral", "displayName": "Warm Muted" },
+      "rail-muted": { "role": "neutral", "displayName": "Rail Muted" },
+      "danger-red": { "role": "tertiary", "displayName": "Danger Red", "tonalRamp": ["#5f131d", "#861520", "#a9272a", "#ce4646"] },
+      "danger-soft": { "role": "tertiary", "displayName": "Danger Soft" },
+      "warning-gold": { "role": "tertiary", "displayName": "Warning Gold", "tonalRamp": ["#855421", "#a87325", "#c3922e", "#e4b03b"] },
+      "warning-soft": { "role": "tertiary", "displayName": "Warning Soft" }
+    },
+    "typographyMeta": {
+      "page-title": { "displayName": "Page title", "purpose": "Nome do projeto ou da sprint no cabeçalho." },
+      "panel-title": { "displayName": "Panel title", "purpose": "Título editável do card no painel." },
+      "card-title": { "displayName": "Card title", "purpose": "Título do card nas colunas." },
+      "body": { "displayName": "Body", "purpose": "Descrição, campos e mensagens." },
+      "label-caps": { "displayName": "Label caps", "purpose": "Cabeçalho de coluna e rótulos de seção." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgb(11 11 11 / 0.06), 0 4px 12px rgb(11 11 11 / 0.06)", "purpose": "Cards em repouso." },
+      { "name": "raised", "value": "0 4px 8px rgb(11 11 11 / 0.08), 0 12px 32px rgb(11 11 11 / 0.1)", "purpose": "Card em arrasto, painel e formulário de login." }
+    ],
+    "motion": [
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover e mudanças de estado." },
+      { "name": "duration-base", "value": "200ms", "purpose": "Overlay do menu mobile." },
+      { "name": "duration-slow", "value": "250ms", "purpose": "Abertura da gaveta mobile." },
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Movimento da gaveta mobile." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal de um formulário.",
+      "html": "<button class=\"ds-btn-primary\">Adicionar</button>",
+      "css": ".ds-btn-primary { background: #002b0f; color: #f8f8f6; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; font: 600 13px/1.25 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: background-color 150ms ease-out; } .ds-btn-primary:hover { background: #23512a; } .ds-btn-primary:focus-visible { outline: 3px solid rgb(56 129 67 / 0.45); outline-offset: 1px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Atalhos e ações de apoio.",
+      "html": "<button class=\"ds-btn-secondary\">Próxima semana</button>",
+      "css": ".ds-btn-secondary { background: #fff; color: #002b0f; padding: 6px 12px; border: 1px solid #dbcfc5; border-radius: 8px; font: 600 13px/1.25 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: background-color 150ms ease-out; } .ds-btn-secondary:hover { background: #eae7e4; } .ds-btn-secondary:focus-visible { outline: 3px solid rgb(56 129 67 / 0.45); outline-offset: 1px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo de texto e select.",
+      "html": "<input class=\"ds-field\" placeholder=\"Título do card…\" />",
+      "css": ".ds-field { width: 100%; padding: 7px 10px; background: #fff; border: 1px solid #8f8780; border-radius: 8px; color: #222; font: 400 13px 'Plus Jakarta Sans', sans-serif; } .ds-field::placeholder { color: #6b6560; } .ds-field:focus { outline: 3px solid rgb(56 129 67 / 0.35); border-color: #388143; }"
+    },
+    {
+      "name": "Project Tag",
+      "kind": "chip",
+      "description": "Acrônimo do projeto em cards do Sprint.",
+      "html": "<span class=\"ds-tag\"><span class=\"ds-tag-dot\"></span>AXV</span>",
+      "css": ".ds-tag { display: inline-flex; min-width: 52px; align-items: center; justify-content: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #6b8e4e 16%, white); color: #002b0f; font: 700 10.5px 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.08em; } .ds-tag-dot { width: 6px; height: 6px; border-radius: 50%; background: #6b8e4e; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Card do quadro, com botão de Sprint no canto.",
+      "html": "<div class=\"ds-card\"><span class=\"ds-card-title\">Política de reembolso</span><button class=\"ds-card-sprint\" aria-label=\"Enviar para a Sprint\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\"/></svg></button></div>",
+      "css": ".ds-card { position: relative; width: 264px; padding: 10px 36px 10px 12px; background: #fff; border: 1px solid #e3deda; border-radius: 8px; box-shadow: 0 1px 2px rgb(11 11 11 / 0.06), 0 4px 12px rgb(11 11 11 / 0.06); transition: border-color 150ms ease-out; } .ds-card:hover { border-color: #dbcfc5; } .ds-card-title { color: #002b0f; font: 600 13.5px/1.375 'Plus Jakarta Sans', sans-serif; } .ds-card-sprint { position: absolute; top: 6px; right: 6px; display: flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: transparent; color: #23512a; cursor: pointer; } .ds-card-sprint:hover { background: #eae7e4; color: #002b0f; }"
+    },
+    {
+      "name": "Sprint Band",
+      "kind": "custom",
+      "description": "Cabeçalho do Sprint, contínuo com o trilho.",
+      "html": "<header class=\"ds-band\"><strong>Sprint 2</strong><span>// Dia 38</span><div class=\"ds-band-bar\"><i></i></div></header>",
+      "css": ".ds-band { display: flex; height: 56px; align-items: center; gap: 12px; padding: 0 24px; background: #002b0f; color: #dbcfc5; font: 500 13px 'Plus Jakarta Sans', sans-serif; } .ds-band strong { color: #f8f8f6; font-size: 18px; letter-spacing: -0.02em; } .ds-band-bar { width: 144px; height: 6px; overflow: hidden; border-radius: 999px; background: rgb(219 207 197 / 0.18); } .ds-band-bar i { display: block; width: 36%; height: 100%; background: #5bb168; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O quadro de trabalho de uma consultoria",
+    "overview": "O martrello usa a identidade da Axivero a serviço de um kanban que qualquer usuário de Trello lê de imediato. A marca entra por cor, tipo, densidade e um único gesto próprio; navegação e controles continuam os esperados. O fundo é claro porque a cena é um notebook com luz de escritório. A densidade é de ferramenta de trabalho: muitos cards visíveis, textos curtos, nada competindo com as colunas. A cor faz trabalho real: o verde-floresta marca o que é estrutura, e vermelho e dourado aparecem só quando há algo atrasado ou bloqueado.",
+    "keyCharacteristics": [
+      "Trilho verde-floresta fixo à esquerda, conteúdo sobre paper e colunas em greige",
+      "Plus Jakarta Sans em tudo, com rótulos em caixa alta e tracking largo",
+      "Cards brancos com filete fino e sombra difusa",
+      "No Sprint, o trilho dobra sobre o cabeçalho e forma uma faixa em L",
+      "Separador // em títulos de apoio"
+    ],
+    "rules": [
+      { "name": "The Earned Color Rule", "body": "Vermelho e dourado só aparecem quando carregam estado. Nunca como decoração.", "section": "colors" },
+      { "name": "The Project Data Rule", "body": "A cor do projeto é dado do usuário: aparece em pontos e tints, sempre com texto escuro ou claro do sistema por cima, nunca como cor de texto.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Nenhuma segunda família entra na interface. A exceção é código dentro do markdown das descrições.", "section": "typography" }
+    ],
+    "dos": [
+      "Do usar ícones Lucide com traço de 1.75 a 2px.",
+      "Do mostrar atrasado e bloqueado no próprio card, sem exigir abertura.",
+      "Do manter acrônimos como padrão em qualquer lugar onde um projeto apareça.",
+      "Do usar transições de 150 a 250ms com ease-out, só para indicar estado.",
+      "Do escrever em português do Brasil, sem exclamações e sem emoji."
+    ],
+    "donts": [
+      "Don't usar faixa colorida grossa na lateral dos cards; estado e label vivem em chips e pontos.",
+      "Don't usar glassmorphism na interface; imagem de fundo e malha só no login, sobre verde escuro.",
+      "Don't usar animação decorativa ou em loop fora de skeletons de carregamento.",
+      "Don't mostrar o nome real de um projeto sem o usuário revelar."
+    ]
+  }
+}

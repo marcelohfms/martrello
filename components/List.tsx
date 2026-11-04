@@ -17,56 +17,26 @@ type Props = {
 export function List({ id, title, cards, variant = 'project', onCardClick, quickCreate }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const isSprint = variant === 'sprint';
-  const listBg = isSprint
-    ? 'bg-[var(--color-mt-sprint-list)]'
-    : 'bg-[var(--color-mt-list)]';
-  const headerColor = isSprint
-    ? 'text-[var(--color-mt-sprint-accent)]'
-    : 'text-[var(--color-mt-text)]';
-  const countColor = isSprint
-    ? 'text-[var(--color-mt-sprint-accent)]/60'
-    : 'text-[var(--color-mt-muted)]';
-  const dropRing = isSprint
-    ? 'ring-[var(--color-mt-sprint-accent)]'
-    : 'ring-[var(--color-mt-accent)]';
-
   return (
     <div
       ref={setNodeRef}
       role="region"
       aria-label={`Coluna: ${title}`}
       className={`
-        ${listBg} rounded-[var(--radius-md)]
-        flex flex-col
-        w-72 shrink-0
-        transition-shadow duration-[180ms]
-        ${isOver
-          ? `ring-2 ${dropRing} drop-ring shadow-lg`
-          : 'ring-1 ring-black/10'
-        }
+        flex w-72 shrink-0 flex-col min-h-0
+        ${variant === 'sprint' ? 'md:max-w-md md:flex-[1_0_18rem]' : ''}
+        rounded-[var(--radius-lg)] bg-mt-list
+        transition-shadow duration-[var(--duration-fast)] ease-out
+        ${isOver ? 'ring-2 ring-mt-accent' : ''}
       `}
     >
-      {/* Column header */}
-      <div className="
-        flex items-center justify-between
-        px-3 py-2.5
-        border-b border-black/10
-      ">
-        <span className={`
-          text-[12px] font-semibold tracking-wide uppercase
-          ${headerColor}
-        `}>
-          {title}
-        </span>
-        <span className={`mono-badge ${countColor}`}>
-          {cards.length}
-        </span>
+      <div className="flex items-center justify-between gap-2 px-3 pb-1.5 pt-3">
+        <span className="label-caps truncate text-mt-heading">{title}</span>
+        <span className="text-[12px] font-semibold text-mt-muted">{cards.length}</span>
       </div>
 
-      {/* Card list */}
       <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-1.5 p-2 min-h-[4px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
           {cards.map((c) => (
             <SortableCard
               key={c.id}
@@ -77,24 +47,13 @@ export function List({ id, title, cards, variant = 'project', onCardClick, quick
           ))}
           {/* Empty drop zone — keeps column droppable when empty */}
           {cards.length === 0 && (
-            <div
-              className="
-                h-16 rounded-[var(--radius-sm)]
-                border border-dashed
-                border-black/15
-                flex items-center justify-center
-              "
-              aria-hidden="true"
-            >
-              <span className="text-[11px] text-[var(--color-mt-muted)]/50 select-none">
-                sem cards
-              </span>
+            <div className="flex h-16 shrink-0 select-none items-center justify-center rounded-[var(--radius-md)] border border-dashed border-mt-line-strong text-[12px] text-mt-muted">
+              Sem cards
             </div>
           )}
         </div>
       </SortableContext>
 
-      {/* Quick create */}
       {quickCreate && (
         <div className="px-2 pb-2">
           <QuickCreate projectId={quickCreate.projectId} listId={quickCreate.listId} />

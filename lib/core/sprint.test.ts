@@ -5,7 +5,7 @@ import { createProject, getProjectByNameOrId } from './projects';
 import { createCard, getCardById } from './cards';
 import {
   startSprint, getActiveSprint, addToSprint, moveInSprint, removeFromSprint,
-  closeSprint, listSprints, getSprintHistory,
+  closeSprint, listSprints, getSprintHistory, getCardSprintState,
 } from './sprint';
 
 let db: Db;
@@ -58,6 +58,18 @@ describe('sprint', () => {
     await moveInSprint(db, c.id, 'done');
     const active = await getActiveSprint(db);
     expect(active!.cards.find((x) => x.id === c.id)!.sprintList).toBe('done');
+    close();
+  });
+
+  it('getCardSprintState reports null, false and true', async () => {
+    const c = await makeCard();
+    expect(await getCardSprintState(db, c.id)).toBeNull();
+    await startSprint(db);
+    expect(await getCardSprintState(db, c.id)).toBe(false);
+    await addToSprint(db, c.id);
+    expect(await getCardSprintState(db, c.id)).toBe(true);
+    await removeFromSprint(db, c.id);
+    expect(await getCardSprintState(db, c.id)).toBe(false);
     close();
   });
 

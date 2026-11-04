@@ -4,46 +4,36 @@ import { loginAction, type LoginState } from './actions';
 
 const initial: LoginState = { error: null };
 
-const inputClass = `
-  w-full rounded-[4px] px-3 py-2 text-[14px]
-  bg-[var(--color-mt-sidebar-hover)] text-[var(--color-mt-text)]
-  border border-[var(--color-mt-line-subtle)]
-  focus:outline-2 focus:outline-[var(--color-mt-accent)]
-`;
-
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initial);
 
   return (
-    <form action={formAction} className="w-full max-w-[320px] flex flex-col gap-4" aria-describedby="login-error">
-      <h1 className="text-[20px] font-semibold tracking-tight text-[var(--color-mt-text)] select-none text-center mb-2">
-        <span className="text-[var(--color-mt-accent)]">mar</span>trello
-      </h1>
+    <form
+      action={formAction}
+      aria-describedby="login-error"
+      className="relative flex w-full max-w-[360px] flex-col gap-4 rounded-[var(--radius-lg)] bg-mt-card p-8 shadow-raised"
+    >
+      <div className="mb-2 flex items-center gap-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/mark-green.png" alt="" width={20} height={31} />
+        <h1 className="select-none text-[24px] font-extrabold tracking-[-0.02em] text-mt-heading">martrello</h1>
+      </div>
 
-      <label className="flex flex-col gap-1.5 text-[12px] text-[var(--color-mt-muted-hi)]">
+      <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
         Usuário
-        <input name="username" autoComplete="username" required autoFocus className={inputClass} />
+        <input name="username" autoComplete="username" required autoFocus className="field !text-[14px] font-normal" />
       </label>
 
-      <label className="flex flex-col gap-1.5 text-[12px] text-[var(--color-mt-muted-hi)]">
+      <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
         Senha
-        <input name="password" type="password" autoComplete="current-password" required className={inputClass} />
+        <input name="password" type="password" autoComplete="current-password" required className="field !text-[14px] font-normal" />
       </label>
 
-      <p id="login-error" role="alert" className="min-h-[18px] text-[12px] text-red-400">
+      <p id="login-error" role="alert" className="min-h-[20px] text-[13px] text-mt-danger">
         {state.error}
       </p>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="
-          rounded-[4px] px-3 py-2 text-[14px] font-medium
-          bg-[var(--color-mt-accent)] text-black
-          hover:opacity-90 disabled:opacity-50
-          transition-opacity duration-[120ms]
-        "
-      >
+      <button type="submit" disabled={pending} className="btn btn-primary !py-2.5 !text-[14px]">
         {pending ? 'Entrando…' : 'Entrar'}
       </button>
     </form>

@@ -6,8 +6,9 @@ import { Card, type CardData } from './Card';
 type Props = { card: CardData; variant?: 'project' | 'sprint'; onClick?: () => void };
 
 export function SortableCard({ card, variant, onClick }: Props) {
+  // dnd-kit's `attributes` are left out: they make this wrapper a role="button"
+  // around the card's real buttons, and no keyboard sensor uses them.
   const {
-    attributes,
     listeners,
     setNodeRef,
     transform,
@@ -21,12 +22,9 @@ export function SortableCard({ card, variant, onClick }: Props) {
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition ?? undefined,
+        // The moving copy lives in Board's DragOverlay; this marks the origin.
         opacity: isDragging ? 0.35 : 1,
-        // subtle scale while dragging ghost
-        scale: isDragging ? '1.02' : undefined,
-        zIndex: isDragging ? 10 : undefined,
       }}
-      {...attributes}
       {...listeners}
     >
       <Card card={card} variant={variant} onClick={onClick} />
