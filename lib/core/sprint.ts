@@ -125,6 +125,17 @@ export async function removeFromSprint(db: Db, cardId: string) {
   await db.delete(sprintSlots).where(eq(sprintSlots.cardId, cardId));
 }
 
+/** Whether the card is in the active sprint; null when no sprint is active. */
+export async function getCardSprintState(db: Db, cardId: string): Promise<boolean | null> {
+  const sprint = await getActiveSprintRow(db);
+  if (!sprint) return null;
+  const slot = (await db
+    .select()
+    .from(sprintSlots)
+    .where(and(eq(sprintSlots.cardId, cardId), eq(sprintSlots.sprintId, sprint.id))))[0];
+  return Boolean(slot);
+}
+
 export async function listSprints(db: Db, opts: { limit?: number } = {}) {
   const rows = await db.select().from(sprints).orderBy(desc(sprints.startedAt), desc(sprints.id)).limit(opts.limit ?? 20);
   return rows;

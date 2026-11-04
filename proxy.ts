@@ -28,5 +28,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // /brand holds public brand assets the login page needs before auth.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|brand/).*)'],
 };

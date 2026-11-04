@@ -1,6 +1,9 @@
 'use client';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { CalendarDays, Lock } from 'lucide-react';
+import { ProjectTag } from './ProjectTag';
+import { SprintToggle } from './SprintToggle';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
 
 export type CardData = {
@@ -12,155 +15,96 @@ export type CardData = {
   projectAcronym?: string;
   projectColor?: string;
   isBlocked: boolean;
+  /** Undefined when there is no active sprint, which hides the sprint button. */
+  inSprint?: boolean;
 };
 
 type Props = {
   card: CardData;
   variant?: 'project' | 'sprint';
   onClick?: () => void;
+  /** Rendered in the drag overlay, lifted off the column. */
+  lifted?: boolean;
 };
 
-// SVG calendar icon — no emoji
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="10"
-      height="10"
-      viewBox="0 0 12 12"
-      fill="none"
-      aria-hidden="true"
-    >
-      <rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M1 5h10" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M4 1v2M8 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="10"
-      height="10"
-      viewBox="0 0 12 12"
-      fill="none"
-      aria-hidden="true"
-    >
-      <rect x="2.5" y="5.5" width="7" height="5" rx="1" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M4 5.5V3.8a2 2 0 1 1 4 0V5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export function Card({ card, variant = 'project', onClick }: Props) {
-  const primaryLabel = card.labels[0];
-  const accent = card.isBlocked ? 'var(--color-mt-warning)' : (primaryLabel?.color ?? 'transparent');
-  const isSprint = variant === 'sprint';
+export function Card({ card, variant = 'project', onClick, lifted = false }: Props) {
   const { revealed } = useProjectPrivacy();
-
-  const bg = isSprint
-    ? 'bg-[var(--color-mt-sprint-card)] hover:bg-[var(--color-mt-sprint-card-hover)]'
-    : 'bg-[var(--color-mt-card)] hover:bg-[var(--color-mt-card-hover)]';
-  const blockedOpacity = card.isBlocked ? 'opacity-70 hover:opacity-100' : '';
+  const showProjectTag = variant === 'sprint' && Boolean(card.projectAcronym);
+  const showSprintToggle = card.inSprint !== undefined && !lifted;
 
   const isOverdue = card.dueDate ? parseISO(card.dueDate) < new Date() : false;
-
   const dueDateFormatted = card.dueDate
     ? format(parseISO(card.dueDate), 'dd MMM', { locale: ptBR })
     : null;
+  const hasMeta = card.isBlocked || card.dueDate || card.labels.length > 0;
+
+  const ariaLabel = [
+    `Card: ${card.title}`,
+    showProjectTag ? `Projeto: ${card.projectAcronym}` : null,
+    card.isBlocked ? 'Bloqueado' : null,
+    dueDateFormatted ? `Prazo: ${dueDateFormatted}${isOverdue ? ' (atrasado)' : ''}` : null,
+  ].filter(Boolean).join('. ');
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Card: ${card.title}${card.dueDate ? `. Prazo: ${dueDateFormatted}` : ''}`}
+    <div
       className={`
-        card-btn
-        w-full text-left rounded-[var(--radius-sm)]
-        ${bg}
-        ${blockedOpacity}
-        px-2.5 py-2
-        border-l-[3px]
-        shadow-sm
-        transition-colors duration-[120ms]
-        cursor-pointer
-        focus-visible:outline-2
-        focus-visible:outline-[var(--color-mt-accent)]
-        focus-visible:outline-offset-1
-        focus-visible:rounded-[var(--radius-sm)]
-        group
+        relative rounded-[var(--radius-md)] border bg-mt-card
+        transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-out
+        ${lifted
+          ? 'border-mt-line-strong shadow-raised'
+          : 'border-mt-line shadow-card hover:border-mt-line-strong'
+        }
       `}
-      style={{ borderLeftColor: accent }}
     >
-      {/* Title */}
-      <p className="
-        text-[13px] leading-snug
-        text-[var(--color-mt-text)]
-        font-medium
-        group-hover:text-white
-        transition-colors duration-[120ms]
-        break-words
-        flex items-center gap-1
-      ">
-        {card.isBlocked && (
-          <LockIcon className="text-[var(--color-mt-warning)] shrink-0" />
-        )}
-        <span>{card.title}</span>
-      </p>
-
-      {/* Meta row */}
-      {(card.dueDate || card.labels.length > 0 || (isSprint && card.projectName)) && (
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-2">
-          {/* Due date */}
-          {card.dueDate && (
-            <span className={`
-              flex items-center gap-1
-              text-[11px] font-medium mono-badge
-              ${isOverdue
-                ? 'text-[var(--color-mt-danger)]'
-                : 'text-[var(--color-mt-muted-hi)]'
-              }
-            `}>
-              <CalendarIcon className={isOverdue ? 'text-[var(--color-mt-danger)]' : undefined} />
-              {dueDateFormatted}
-              {isOverdue && <span className="sr-only">(atrasado)</span>}
-            </span>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        className={`
+          flex w-full cursor-pointer flex-col gap-2 rounded-[var(--radius-md)] py-2.5 pl-3 text-left
+          ${showSprintToggle ? 'pr-9' : 'pr-3'}
+        `}
+      >
+        <div className="flex items-start gap-2">
+          {showProjectTag && (
+            <ProjectTag
+              acronym={card.projectAcronym!}
+              color={card.projectColor}
+              name={revealed ? card.projectName : undefined}
+            />
           )}
-
-          {/* Labels */}
-          {card.labels.map((l) => (
-            <span
-              key={l.name}
-              className="flex items-center gap-1 text-[11px] text-[var(--color-mt-muted-hi)]"
-            >
-              <span
-                className="w-6 h-1 rounded-sm shrink-0"
-                style={{ background: l.color }}
-                aria-hidden="true"
-              />
-              <span className="truncate max-w-[80px]">{l.name}</span>
-            </span>
-          ))}
-
-          {/* Sprint: project pill */}
-          {isSprint && card.projectName && (
-            <span
-              className="
-                ml-auto mono-badge
-                px-1.5 py-0.5 rounded-[3px]
-                bg-black/20
-                font-medium truncate max-w-[100px]
-              "
-              style={{ color: card.projectColor ?? 'var(--color-mt-muted-hi)' }}
-              title={revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
-            >
-              {revealed ? card.projectName : (card.projectAcronym ?? card.projectName)}
-            </span>
-          )}
+          <p className="min-w-0 text-[13.5px] font-semibold leading-snug text-mt-heading break-words">
+            {card.title}
+          </p>
         </div>
-      )}
-    </button>
+
+        {hasMeta && (
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] font-medium">
+            {card.isBlocked && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-mt-warning-soft px-2 py-0.5 text-mt-warning">
+                <Lock size={11} strokeWidth={2} aria-hidden="true" />
+                Bloqueado
+              </span>
+            )}
+
+            {card.dueDate && (
+              <span className={`inline-flex items-center gap-1 ${isOverdue ? 'font-semibold text-mt-danger' : 'text-mt-muted'}`}>
+                <CalendarDays size={12} strokeWidth={2} aria-hidden="true" />
+                {dueDateFormatted}
+              </span>
+            )}
+
+            {card.labels.map((l) => (
+              <span key={l.name} className="inline-flex min-w-0 items-center gap-1.5 text-mt-muted">
+                <span className="size-2 shrink-0 rounded-full" style={{ background: l.color }} aria-hidden="true" />
+                <span className="max-w-[100px] truncate">{l.name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+
+      {showSprintToggle && <SprintToggle cardId={card.id} inSprint={card.inSprint!} />}
+    </div>
   );
 }

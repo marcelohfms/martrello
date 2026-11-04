@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Eye, EyeOff, LogOut, Menu, X, Zap } from 'lucide-react';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
 import { logoutAction } from '@/app/login/actions';
 
@@ -19,59 +20,10 @@ type Props = {
   sprintName: string | null;
 };
 
-// ── Icon components (no emoji) ────────────────────────────────────
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function EyeIcon({ open, className }: { open: boolean; className?: string }) {
-  return (
-    <svg className={className} width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3" />
-      {!open && <path d="M2 2l12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />}
-    </svg>
-  );
-}
-
-function SprintIcon() {
-  return (
-    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
-      <circle cx="4" cy="4" r="3" fill="currentColor" />
-    </svg>
-  );
-}
-
 function ProjectDot({ color }: { color: string }) {
   return (
     <span
-      className="w-2 h-2 rounded-full shrink-0 ring-1 ring-black/20"
+      className="size-2 shrink-0 rounded-full ring-1 ring-white/25"
       style={{ background: color }}
       aria-hidden="true"
     />
@@ -112,23 +64,16 @@ export function SidebarClient({ projects, sprintName }: Props) {
 
   return (
     <>
-      {/* ── Mobile hamburger ──────────────────────────────────────── */}
+      {/* ── Mobile hamburger: opaque so it reads on the paper and the green header ── */}
       <button
         type="button"
         aria-label="Abrir menu"
         aria-expanded={mobileOpen}
         aria-controls="sidebar-nav"
         onClick={() => setMobileOpen(true)}
-        className="
-          md:hidden fixed top-3 left-3 z-50
-          w-8 h-8 flex items-center justify-center
-          rounded-md text-[var(--color-mt-muted-hi)]
-          hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
-          transition-colors duration-[120ms]
-          focus-visible:outline-2 focus-visible:outline-[var(--color-mt-accent)]
-        "
+        className="btn btn-secondary md:hidden fixed left-3 top-2 z-30 !size-10 !p-0"
       >
-        <MenuIcon />
+        <Menu size={18} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {/* ── Overlay (mobile only) ─────────────────────────────────── */}
@@ -143,26 +88,21 @@ export function SidebarClient({ projects, sprintName }: Props) {
         id="sidebar-nav"
         aria-label="Navegação principal"
         className={`
-          sidebar-drawer md:transform-none
+          on-rail sidebar-drawer md:transform-none
           ${mobileOpen ? 'open' : ''}
           fixed md:static top-0 left-0 z-50 md:z-auto
           w-60 h-full md:h-auto shrink-0
-          border-r border-[var(--color-mt-line-subtle)]
-          bg-[var(--color-mt-sidebar-bg)]
+          border-r border-mt-rail-line
+          bg-mt-rail text-mt-rail-text
           flex flex-col
         `}
       >
         {/* Brand header */}
-        <div className="
-          px-4 py-3 flex items-center justify-between
-          border-b border-[var(--color-mt-line-subtle)]
-        ">
-          <span className="
-            text-[13px] font-semibold tracking-tight
-            text-[var(--color-mt-text)]
-            select-none
-          ">
-            <span className="text-[var(--color-mt-accent)]">mar</span>trello
+        <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-mt-rail-line pl-4 pr-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/mark-beige.png" alt="" width={14} height={22} />
+          <span className="mr-auto select-none text-[16px] font-bold tracking-[-0.02em] text-mt-rail-strong">
+            martrello
           </span>
           <button
             type="button"
@@ -170,122 +110,92 @@ export function SidebarClient({ projects, sprintName }: Props) {
             aria-pressed={revealed}
             aria-label={revealed ? 'Esconder nomes reais dos projetos' : 'Mostrar nomes reais dos projetos'}
             title={revealed ? 'Esconder nomes reais' : 'Mostrar nomes reais'}
-            className="
-              w-7 h-7 flex items-center justify-center shrink-0
-              rounded text-[var(--color-mt-muted)]
-              hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
-              transition-colors duration-[120ms]
-            "
+            className="btn !p-1.5 text-mt-rail-muted hover:bg-mt-rail-hover hover:text-mt-rail-strong"
           >
-            <EyeIcon open={revealed} />
+            {revealed
+              ? <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
+              : <EyeOff size={16} strokeWidth={1.75} aria-hidden="true" />
+            }
           </button>
           {/* Mobile close */}
           <button
             type="button"
             aria-label="Fechar menu"
             onClick={closeDrawer}
-            className="
-              md:hidden w-7 h-7 flex items-center justify-center
-              rounded text-[var(--color-mt-muted)]
-              hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
-              transition-colors duration-[120ms]
-            "
+            className="btn md:hidden !p-1.5 text-mt-rail-muted hover:bg-mt-rail-hover hover:text-mt-rail-strong"
           >
-            <CloseIcon />
+            <X size={16} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-2 text-[13px]">
+        <nav className="flex-1 overflow-y-auto px-2 py-3 text-[13.5px]">
           {/* Sprint link */}
           <Link
             href={sprintHref}
+            aria-current={isSprintActive ? 'page' : undefined}
             className={`
-              group flex items-center gap-2.5 px-3 py-2 mx-1 rounded-[4px]
-              transition-colors duration-[120ms]
+              flex items-center gap-2.5 rounded-[var(--radius-md)] px-2.5 py-2 font-semibold no-underline
+              transition-colors duration-[var(--duration-fast)] ease-out
               ${isSprintActive
-                ? 'bg-[var(--color-mt-sprint-accent-dim)]/20 text-[var(--color-mt-sprint-accent-hi)]'
-                : 'text-[var(--color-mt-sprint-accent)] hover:bg-[var(--color-mt-sidebar-hover)] hover:text-[var(--color-mt-sprint-accent-hi)]'
+                ? 'bg-mt-rail-active text-mt-rail-strong'
+                : 'text-mt-rail-text hover:bg-mt-rail-hover hover:text-mt-rail-strong'
               }
             `}
           >
-            <span className={`
-              transition-transform duration-[120ms]
-              ${isSprintActive ? 'scale-125' : 'group-hover:scale-110'}
-              text-[var(--color-mt-sprint-accent)]
-            `}>
-              <SprintIcon />
+            <Zap size={15} strokeWidth={1.75} className="shrink-0 text-ax-green-400" aria-hidden="true" />
+            <span className="truncate">
+              {!sprintName && 'Sprint atual'}
+              {sprintName && /^sprint\b/i.test(sprintName) && sprintName}
+              {sprintName && !/^sprint\b/i.test(sprintName) && (
+                <>Sprint <span aria-hidden="true" className="font-medium text-mt-rail-muted">//</span> {sprintName}</>
+              )}
             </span>
-            <span className="font-medium">
-              Sprint{sprintName ? ` · ${sprintName}` : ' atual'}
-            </span>
-            {isSprintActive && (
-              <span className="ml-auto w-1 h-1 rounded-full bg-[var(--color-mt-sprint-accent)]" />
-            )}
           </Link>
 
           {/* Projects section */}
-          <div className="
-            px-3 pt-5 pb-1.5
-            text-[10px] font-semibold uppercase tracking-widest
-            text-[var(--color-mt-muted)]
-          ">
-            Projetos
-          </div>
+          <div className="label-caps px-2.5 pb-1.5 pt-5 text-mt-rail-muted">Projetos</div>
 
           {projects.length === 0 && (
-            <p className="px-4 py-2 text-[12px] text-[var(--color-mt-muted)] italic">
-              Nenhum projeto ainda.
-            </p>
+            <p className="px-2.5 py-2 text-[13px] text-mt-rail-muted">Nenhum projeto ainda.</p>
           )}
 
-          {projects.map((p) => {
-            const href = `/project/${p.id}`;
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={p.id}
-                href={href}
-                className={`
-                  group flex items-center justify-between gap-2 px-3 py-[7px] mx-1 rounded-[4px]
-                  transition-colors duration-[120ms]
-                  ${isActive
-                    ? 'bg-[var(--color-mt-sidebar-active)] text-[var(--color-mt-text)]'
-                    : 'text-[var(--color-mt-text-secondary)] hover:bg-[var(--color-mt-sidebar-hover)] hover:text-[var(--color-mt-text)]'
-                  }
-                `}
-              >
-                <span className="flex items-center gap-2.5 min-w-0">
-                  <ProjectDot color={p.color} />
-                  <span className="truncate">{revealed ? p.name : p.acronym}</span>
-                </span>
-                <span className="
-                  mono-badge shrink-0
-                  text-[var(--color-mt-muted)]
-                  group-hover:text-[var(--color-mt-muted-hi)]
-                  transition-colors duration-[120ms]
-                ">
-                  {p.cardCount}
-                </span>
-              </Link>
-            );
-          })}
+          <div className="flex flex-col gap-0.5">
+            {projects.map((p) => {
+              const href = `/project/${p.id}`;
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={p.id}
+                  href={href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`
+                    flex items-center justify-between gap-2 rounded-[var(--radius-md)] px-2.5 py-1.5 no-underline
+                    transition-colors duration-[var(--duration-fast)] ease-out
+                    ${isActive
+                      ? 'bg-mt-rail-active font-semibold text-mt-rail-strong'
+                      : 'font-medium text-mt-rail-text hover:bg-mt-rail-hover hover:text-mt-rail-strong'
+                    }
+                  `}
+                >
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <ProjectDot color={p.color} />
+                    <span className="truncate">{revealed ? p.name : p.acronym}</span>
+                  </span>
+                  <span className="shrink-0 text-[12px] font-medium text-mt-rail-muted">{p.cardCount}</span>
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Footer: logout */}
-        <form
-          action={logoutAction}
-          className="px-2 py-1.5 border-t border-[var(--color-mt-line-subtle)]"
-        >
+        <form action={logoutAction} className="border-t border-mt-rail-line p-2">
           <button
             type="submit"
-            className="
-              w-full text-left px-2 py-1.5 rounded-[4px]
-              text-[12px] text-[var(--color-mt-muted)]
-              hover:text-[var(--color-mt-text)] hover:bg-[var(--color-mt-sidebar-hover)]
-              transition-colors duration-[120ms]
-            "
+            className="btn w-full !justify-start text-mt-rail-muted hover:bg-mt-rail-hover hover:text-mt-rail-strong"
           >
+            <LogOut size={14} strokeWidth={1.75} aria-hidden="true" />
             Sair
           </button>
         </form>
