@@ -25,6 +25,19 @@ export async function getActiveSprintRow(db: Db): Promise<Sprint | null> {
   return (await db.select().from(sprints).where(isNull(sprints.closedAt)))[0] ?? null;
 }
 
+/** Nearest deadline first; cards without a deadline go last; ties keep sprint position. */
+export function compareByDeadline(
+  a: { dueDate: string | null; position: number },
+  b: { dueDate: string | null; position: number },
+): number {
+  if (a.dueDate !== b.dueDate) {
+    if (a.dueDate === null) return 1;
+    if (b.dueDate === null) return -1;
+    return a.dueDate < b.dueDate ? -1 : 1;
+  }
+  return a.position - b.position;
+}
+
 async function loadSprintCards(db: Db, sprintId: string): Promise<SprintCard[]> {
   const rows = await db
     .select({
@@ -61,7 +74,7 @@ async function loadSprintCards(db: Db, sprintId: string): Promise<SprintCard[]> 
       isBlocked: statuses.get(r.card.id)?.isBlocked ?? false,
     });
   }
-  return out;
+  return out.sort(compareByDeadline);
 }
 
 export async function getActiveSprint(db: Db): Promise<(Sprint & { cards: SprintCard[] }) | null> {
