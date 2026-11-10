@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
 import { createProject, getProjectByNameOrId } from './projects';
-import { createCard, getCardById } from './cards';
+import { createCard, getCardById, updateCard } from './cards';
 import {
   startSprint, getActiveSprint, addToSprint, moveInSprint, removeFromSprint,
   closeSprint, listSprints, getSprintHistory, getCardSprintState,
@@ -17,6 +17,24 @@ async function makeCard(project = 'p') {
   const full = await getProjectByNameOrId(db, project);
   return createCard(db, { project, title: `task-${Math.random().toString(36).slice(2, 6)}`, list: full.lists[0].id });
 }
+
+describe('sprint ordering', () => {
+  it('lists sprint cards by nearest deadline first, undated last, ties by position', async () => {
+    await startSprint(db);
+    const late = await makeCard();
+    const undated = await makeCard();
+    const soon = await makeCard();
+    const soonToo = await makeCard();
+    await updateCard(db, late.id, { dueDate: '2026-11-24' });
+    await updateCard(db, soon.id, { dueDate: '2026-11-11' });
+    await updateCard(db, soonToo.id, { dueDate: '2026-11-11' });
+    for (const c of [late, undated, soon, soonToo]) await addToSprint(db, c.id);
+
+    const active = await getActiveSprint(db);
+    expect(active!.cards.map((c) => c.id)).toEqual([soon.id, soonToo.id, late.id, undated.id]);
+    close();
+  });
+});
 
 describe('sprint', () => {
   it('starts a sprint with auto-generated name', async () => {
