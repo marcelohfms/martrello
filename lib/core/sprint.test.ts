@@ -1,5 +1,5 @@
 // lib/core/sprint.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { and, eq, isNull } from 'drizzle-orm';
 import { makeTestDb, makeUser, addMemberRow, type Db } from './test-helpers';
 import type { Actor } from '@/lib/access/actor';
@@ -185,6 +185,49 @@ describe('ensureCurrentSprint', () => {
     expect(open.map((s) => s.userId).sort()).toEqual([adminId, memberId].sort());
     expect(open.every((s) => s.weekStart === '2026-11-16')).toBe(true);
   });
+
+  it('a falha de um usuário na virada não impede os outros', async () => {
+    // A corrupt open sprint makes this user's rollover throw (invalid week date).
+    db.insert(sprints).values({ id: 'BAD', startedAt: 1, userId: adminId, weekStart: '1999-xx' }).run();
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(await rolloverAllSprints(db, WED)).toBe(1);
+      expect(err).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^\\[sprint\\] falha ao virar a semana de ${adminId}: `)));
+    } finally {
+      err.mockRestore();
+    }
+    expect(sprintsOf(memberId).map((s) => s.weekStart)).toEqual(['2026-11-16']);
+  });
+
+  it('se outro processo abre a sprint da semana no meio do caminho, devolve a dele', async () => {
+    const stale = await ensureCurrentSprint(db, memberId, PREV_WED);
+    const theirs = { id: 'THEIRS', name: 'Semana 16/11', startedAt: 1, userId: memberId, weekStart: '2026-11-16' };
+    // Simulates the race: the other process commits its row, then our insert hits the UNIQUE index.
+    const tx = vi.spyOn(db, 'transaction').mockImplementationOnce(() => {
+      db.insert(sprints).values(theirs).run();
+      throw Object.assign(new Error('UNIQUE constraint failed: sprints.user_id, sprints.week_start'), {
+        code: 'SQLITE_CONSTRAINT_UNIQUE',
+      });
+    });
+    try {
+      const s = await ensureCurrentSprint(db, memberId, WED);
+      expect(s.id).toBe('THEIRS');
+    } finally {
+      tx.mockRestore();
+    }
+    const rows = sprintsOf(memberId);
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r) => r.id === stale.id)!.closedAt).not.toBeNull();
+  });
+
+  it('um erro que não é de UNIQUE continua sendo lançado', async () => {
+    const tx = vi.spyOn(db, 'transaction').mockImplementationOnce(() => { throw new Error('disk I/O error'); });
+    try {
+      await expect(ensureCurrentSprint(db, memberId, WED)).rejects.toThrow(/disk I\/O/);
+    } finally {
+      tx.mockRestore();
+    }
+  });
 });
 
 describe('histórico', () => {
@@ -200,6 +243,7 @@ describe('histórico', () => {
     await ensureCurrentSprint(db, adminId, WED);
     const rows = await listSprints(db, member, {});
     expect(rows.map((s) => s.id)).toEqual([cur.id, prev.id]);
+    for (const r of rows) expect(r).not.toHaveProperty('cardsSnapshot');
     expect(await listSprints(db, member, { limit: 1 })).toHaveLength(1);
   });
 
@@ -214,6 +258,9 @@ describe('histórico', () => {
     db.delete(projectMembers).where(and(eq(projectMembers.projectId, p2.id), eq(projectMembers.userId, memberId))).run();
     const hist = await getSprintHistory(db, member, prev.id);
     expect(hist.cards.map((c) => c.id)).toEqual([kept.id]);
+    expect(hist).not.toHaveProperty('cardsSnapshot');
+    expect(JSON.stringify(hist)).not.toContain('Outro');
+    expect(JSON.stringify(await listSprints(db, member))).not.toContain('Outro');
   });
 
   it('snapshot antigo com sprintList é lido com a etapa correspondente', async () => {

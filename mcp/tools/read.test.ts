@@ -3,6 +3,9 @@ import { makeTestDb, makeUser, addMemberRow, type Db } from '@/lib/core/test-hel
 import { createProject } from '@/lib/core/projects';
 import { createLabel } from '@/lib/core/labels';
 import { createCard } from '@/lib/core/cards';
+import { ensureCurrentSprint } from '@/lib/core/sprint';
+import { projectMembers } from '@/lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 import * as clientModule from '@/lib/db/client';
 import { readTools } from './read';
 import type { ToolCtx } from './index';
@@ -75,5 +78,32 @@ describe('sprint tools', () => {
     expect(listed.map((x) => x.id)).toEqual([s.id]);
     const adminSprint = (await get('martrello_get_sprint').handler({}, ctx)) as { id: string };
     await expect(get('martrello_get_sprint_history').handler({ sprint_id: adminSprint.id }, mctx)).rejects.toThrow(/SPRINT_NOT_FOUND/);
+  });
+
+  it('list_sprints e get_sprint_history não vazam cards de projeto que o membro deixou de ver', async () => {
+    const shown = await createProject(db, ctx.actor, { name: 'Visivel' });
+    const hidden = await createProject(db, ctx.actor, { name: 'Confidencial' });
+    const { user, actor } = await makeUser(db);
+    addMemberRow(db, shown.id, user.id);
+    addMemberRow(db, hidden.id, user.id);
+    await createCard(db, ctx.actor, { project: shown.id, list: 'todo', title: 'tarefa aberta', assignee: user.id });
+    await createCard(db, ctx.actor, { project: hidden.id, list: 'todo', title: 'tarefa sigilosa', assignee: user.id });
+    // A sprint from an old week, closed (with a snapshot holding both cards) by the next call.
+    const old = await ensureCurrentSprint(db, user.id, new Date('2026-01-07T15:00:00Z'));
+    const mctx: ToolCtx = { actor };
+    const get = (n: string) => readTools.find((t) => t.definition.name === n)!;
+    await get('martrello_get_sprint').handler({}, mctx);
+    db.delete(projectMembers).where(and(eq(projectMembers.projectId, hidden.id), eq(projectMembers.userId, user.id))).run();
+
+    const listed = JSON.stringify(await get('martrello_list_sprints').handler({}, mctx));
+    const hist = JSON.stringify(await get('martrello_get_sprint_history').handler({ sprint_id: old.id }, mctx));
+    expect(listed).toContain(old.id);
+    expect(hist).toContain('tarefa aberta');
+    for (const out of [listed, hist]) {
+      expect(out).not.toContain('Confidencial');
+      expect(out).not.toContain(`"${hidden.acronym}"`);
+      expect(out).not.toContain('tarefa sigilosa');
+      expect(out).not.toContain('cardsSnapshot');
+    }
   });
 });

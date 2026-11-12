@@ -46,6 +46,22 @@ function compareSprintCards(a: SprintCard, b: SprintCard): number {
   return SPRINT_STAGES.indexOf(a.stage) - SPRINT_STAGES.indexOf(b.stage) || compareByDeadline(a, b);
 }
 
+/**
+ * A sprint as returned to callers. The raw `cardsSnapshot` JSON is never exposed: it holds every
+ * card of the week, including projects the actor may no longer see; history filters it instead.
+ */
+export type SprintInfo = Omit<Sprint, 'cardsSnapshot'>;
+
+function toInfo(row: Sprint): SprintInfo {
+  const { cardsSnapshot: _raw, ...info } = row;
+  return info;
+}
+
+function isUniqueViolation(e: unknown): boolean {
+  const code = (x: unknown) => (x as { code?: unknown } | null)?.code;
+  return code(e) === 'SQLITE_CONSTRAINT_UNIQUE' || code((e as { cause?: unknown } | null)?.cause) === 'SQLITE_CONSTRAINT_UNIQUE';
+}
+
 function requireUserId(actor: Actor): string {
   const id = actorUserId(actor);
   if (!id) throw new MartrelloError('FORBIDDEN', 'A sprint é pessoal: só um usuário tem sprint.');
@@ -113,6 +129,16 @@ async function loadUserCards(
  * the current week, opening it if needed. A legacy open sprint started this week is adopted.
  */
 export async function ensureCurrentSprint(db: Db, userId: string, now: Date = new Date()): Promise<Sprint> {
+  try {
+    return await openOrCloseSprints(db, userId, now);
+  } catch (e) {
+    // Another process opened the week's sprint between our check and insert: the retry finds it.
+    if (!isUniqueViolation(e)) throw e;
+    return openOrCloseSprints(db, userId, now);
+  }
+}
+
+async function openOrCloseSprints(db: Db, userId: string, now: Date): Promise<Sprint> {
   const week = weekStartISO(now);
   const weekStartMs = weekBounds(week).startMs;
   const open = await db.select().from(sprints).where(and(eq(sprints.userId, userId), isNull(sprints.closedAt)));
@@ -166,26 +192,38 @@ export async function getMySprint(
   db: Db,
   actor: Actor,
   now: Date = new Date(),
-): Promise<Sprint & { cards: SprintCard[] }> {
+): Promise<SprintInfo & { cards: SprintCard[] }> {
   const userId = requireUserId(actor);
   const sprint = await ensureCurrentSprint(db, userId, now);
   const cardsOfWeek = await loadUserCards(db, userId, weekBounds(weekStartISO(now)), await visibleProjectIds(db, actor));
-  return { ...sprint, cards: cardsOfWeek };
+  return { ...toInfo(sprint), cards: cardsOfWeek };
 }
 
-/** Makes sure every active user has the sprint of the current week. Returns how many users. */
+/**
+ * Makes sure every active user has the sprint of the current week. One user's failure is logged
+ * and does not stop the others. Returns how many users succeeded.
+ */
 export async function rolloverAllSprints(db: Db, now: Date = new Date()): Promise<number> {
   const active = await db.select({ id: users.id }).from(users).where(isNull(users.disabledAt));
-  for (const u of active) await ensureCurrentSprint(db, u.id, now);
-  return active.length;
+  let ok = 0;
+  for (const u of active) {
+    try {
+      await ensureCurrentSprint(db, u.id, now);
+      ok += 1;
+    } catch (e) {
+      console.error(`[sprint] falha ao virar a semana de ${u.id}: ${(e as Error).message}`);
+    }
+  }
+  return ok;
 }
 
-export async function listSprints(db: Db, actor: Actor, opts: { limit?: number } = {}): Promise<Sprint[]> {
+export async function listSprints(db: Db, actor: Actor, opts: { limit?: number } = {}): Promise<SprintInfo[]> {
   const userId = requireUserId(actor);
-  return db.select().from(sprints)
+  const rows = await db.select().from(sprints)
     .where(eq(sprints.userId, userId))
     .orderBy(desc(sprints.startedAt), desc(sprints.id))
     .limit(opts.limit ?? 20);
+  return rows.map(toInfo);
 }
 
 /** Snapshots written before the personal sprint carry `sprintList` instead of `stage`. */
@@ -199,7 +237,7 @@ export async function getSprintHistory(
   db: Db,
   actor: Actor,
   sprintId: string,
-): Promise<Sprint & { cards: SprintCard[] }> {
+): Promise<SprintInfo & { cards: SprintCard[] }> {
   const userId = requireUserId(actor);
   const row = (await db.select().from(sprints)
     .where(and(eq(sprints.id, sprintId), eq(sprints.userId, userId))))[0];
@@ -209,5 +247,5 @@ export async function getSprintHistory(
   const cardsOfSprint = snapshot
     .map(readSnapshotCard)
     .filter((c) => visible === null || visible.includes(c.projectId));
-  return { ...row, cards: cardsOfSprint };
+  return { ...toInfo(row), cards: cardsOfSprint };
 }
