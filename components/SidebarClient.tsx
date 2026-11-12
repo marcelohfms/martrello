@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Eye, EyeOff, LogOut, Menu, X, Zap } from 'lucide-react';
+import { Eye, EyeOff, LogOut, Menu, Shield, User, X, Zap } from 'lucide-react';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
 import { logoutAction } from '@/app/login/actions';
 
@@ -18,6 +18,7 @@ type Project = {
 type Props = {
   projects: Project[];
   sprintName: string | null;
+  isAdmin: boolean;
 };
 
 function ProjectDot({ color }: { color: string }) {
@@ -30,8 +31,25 @@ function ProjectDot({ color }: { color: string }) {
   );
 }
 
+function FooterLink({ href, label, icon, active }: { href: string; label: string; icon: React.ReactNode; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? 'page' : undefined}
+      className={`
+        flex items-center gap-2 rounded-[var(--radius-md)] px-2.5 py-1.5 font-medium no-underline
+        transition-colors duration-[var(--duration-fast)] ease-out
+        ${active ? 'bg-mt-rail-active text-mt-rail-strong' : 'text-mt-rail-muted hover:bg-mt-rail-hover hover:text-mt-rail-strong'}
+      `}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────
-export function SidebarClient({ projects, sprintName }: Props) {
+export function SidebarClient({ projects, sprintName, isAdmin }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { revealed, toggle } = useProjectPrivacy();
@@ -189,8 +207,12 @@ export function SidebarClient({ projects, sprintName }: Props) {
           </div>
         </nav>
 
-        {/* Footer: logout */}
-        <form action={logoutAction} className="border-t border-mt-rail-line p-2">
+        {/* Footer: account links + logout */}
+        <div className="flex flex-col gap-0.5 border-t border-mt-rail-line p-2 pb-0 text-[13.5px]">
+          {isAdmin && <FooterLink href="/admin" label="Admin" icon={<Shield size={14} strokeWidth={1.75} aria-hidden="true" />} active={pathname === '/admin'} />}
+          <FooterLink href="/conta" label="Minha conta" icon={<User size={14} strokeWidth={1.75} aria-hidden="true" />} active={pathname === '/conta'} />
+        </div>
+        <form action={logoutAction} className="p-2 pt-0.5">
           <button
             type="submit"
             className="btn w-full !justify-start text-mt-rail-muted hover:bg-mt-rail-hover hover:text-mt-rail-strong"

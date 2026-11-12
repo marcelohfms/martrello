@@ -58,7 +58,7 @@ export function SprintClient({ columns, sprintName, weekDay }: Props) {
       </div>
 
       {openCardId && (
-        <CardPanel cardId={openCardId} onClose={() => setOpenCardId(null)} />
+        <CardPanel key={openCardId} cardId={openCardId} onClose={() => setOpenCardId(null)} />
       )}
     </>
   );

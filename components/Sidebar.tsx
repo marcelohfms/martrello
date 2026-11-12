@@ -15,6 +15,7 @@ export async function Sidebar() {
     <SidebarClient
       projects={projects}
       sprintName={sprint.name}
+      isAdmin={user.role === 'admin'}
     />
   );
 }
