@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { loginAction, type LoginState } from './actions';
 
@@ -36,6 +37,10 @@ export function LoginForm() {
       <button type="submit" disabled={pending} className="btn btn-primary !py-2.5 !text-[14px]">
         {pending ? 'Entrando…' : 'Entrar'}
       </button>
+
+      <Link href="/esqueci-senha" className="text-center text-[13px] text-mt-heading underline">
+        Esqueci minha senha
+      </Link>
     </form>
   );
 }
