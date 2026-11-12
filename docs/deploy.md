@@ -99,7 +99,10 @@ node dist/scripts/user-set.js <email>
 ```
 
 Define a senha de um usuário existente (pede duas vezes, mínimo de 12
-caracteres). Se não existir nenhum admin, cria o primeiro. Trocar a senha
+caracteres). Se o e-mail não existe, cria o usuário e pede também o nome
+("Nome:"; com stdin redirecionado, a senha é a primeira linha e o nome a
+segunda). O primeiro usuário criado quando não há admin vira admin; os demais
+viram membros. Trocar a senha
 encerra todas as sessões abertas dessa pessoa.
 
 ## Migração multiusuário (uma vez)
@@ -112,9 +115,13 @@ executa o migrate). Passo a passo:
 3. Nos logs, confira `migrations applied` seguido de `Ready`.
 4. Entre com `marcelo.ferro@axivero.com.br` e a senha atual. A migração
    converteu o usuário `marcelo` nesse e-mail, de admin, sem mudar a senha.
-5. Confira que a sprint tem as mesmas tarefas de antes. Na primeira execução
-   do agendador de sprints, a sprint antiga é fechada e abre a sprint
-   "Semana dd/MM" com os mesmos cards de A fazer e Fazendo.
+5. Confira a sprint. Na primeira execução do agendador de sprints, a sprint
+   antiga (sem semana definida) é tratada assim: se começou antes da segunda-feira
+   desta semana (America/Sao_Paulo), é fechada e abre a sprint "Semana dd/MM";
+   se começou nesta semana, é adotada, ou seja, renomeada para "Semana dd/MM" e
+   mantida aberta. Nos dois casos a sprint mostra os seus cards em A fazer e
+   Fazendo, mais os de Feito apenas se concluídos nesta semana. Cards mais
+   antigos em Feito não aparecem na sprint e continuam no quadro do projeto.
 
 O que a migração faz com os dados: a 0006 aplica o fluxo fixo de listas; a 0007
 move para o Backlog os cards ativos de "A fazer" que não estão na sprint atual
@@ -124,10 +131,13 @@ e remove `sprint_slots`.
 
 A migração é atômica: ao falhar, nada é alterado e o app não sobe. Causas:
 
-- **Lista fora das etapas.** O log mostra um erro de NOT NULL em
-  `lists.stage` (constraint em `_stage_guard`): algum projeto tem uma lista
-  diferente de A fazer, Fazendo e Feito. Renomeie ou mova a lista (pelo MCP ou
-  pela interface da versão anterior) e faça o deploy de novo.
+- **Lista fora das etapas.** O log mostra
+  `NOT NULL constraint failed: _stage_guard.x`: algum projeto tem uma lista com
+  nome diferente de A fazer, Fazendo e Feito. Uma lista já existente chamada
+  "Backlog" também dispara o erro, pois a migração só reconhece esses três
+  nomes e cria o Backlog por conta própria. Renomeie a lista (pelo MCP ou pela
+  interface da versão anterior), mova os cards para uma das três e faça o
+  deploy de novo.
 - **Sem usuário admin.** Há dados, mas nenhum usuário com o e-mail do admin
   (`_admin_guard`). Confira o usuário no banco e faça o deploy de novo; em
   último caso, restaure o backup do passo 1 (ver Rollback).
