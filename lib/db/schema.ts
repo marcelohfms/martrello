@@ -107,9 +107,12 @@ export const sprintSlots = sqliteTable(
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
-  username: text('username').notNull().unique(),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: ['admin', 'member'] }).notNull().default('member'),
   createdAt: integer('created_at').notNull(),
+  disabledAt: integer('disabled_at'),
 });
 
 export const sessions = sqliteTable(
@@ -134,5 +137,6 @@ export type CardDependency = typeof cardDependencies.$inferSelect;
 export type Sprint = typeof sprints.$inferSelect;
 export type SprintSlot = typeof sprintSlots.$inferSelect;
 export type SprintList = 'backlog' | 'doing' | 'done';
+export type Role = 'admin' | 'member';
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;

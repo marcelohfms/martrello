@@ -9,14 +9,14 @@ import {
 let db: Db;
 beforeEach(async () => {
   db = makeTestDb().db;
-  await db.insert(users).values({ id: 'u1', username: 'marcelo', passwordHash: 'x', createdAt: 0 });
+  await db.insert(users).values({ id: 'u1', email: 'marcelo@axivero.com.br', name: 'Marcelo', passwordHash: 'x', createdAt: 0 });
 });
 
 describe('sessions', () => {
   it('create → validate returns the user', async () => {
     const { token, expiresAt } = await createSession(db, 'u1', 1_000);
     expect(expiresAt).toBe(1_000 + SESSION_TTL_MS);
-    expect(await validateSession(db, token, 2_000)).toEqual({ id: 'u1', username: 'marcelo' });
+    expect(await validateSession(db, token, 2_000)).toEqual({ id: 'u1', email: 'marcelo@axivero.com.br', name: 'Marcelo', role: 'member' });
   });
 
   it('stores only the token hash, never the token', async () => {
@@ -58,6 +58,12 @@ describe('sessions', () => {
     await deleteUserSessions(db, 'u1');
     expect(await validateSession(db, a.token)).toBeNull();
     expect(await validateSession(db, b.token)).toBeNull();
+  });
+
+  it('validateSession devolve null quando o usuário foi desativado', async () => {
+    const { token } = await createSession(db, 'u1');
+    await db.update(users).set({ disabledAt: Date.now() }).where(eq(users.id, 'u1'));
+    expect(await validateSession(db, token)).toBeNull();
   });
 
   it('deleting the user cascades to sessions', async () => {

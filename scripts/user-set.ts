@@ -1,8 +1,15 @@
-// scripts/user-set.ts — create the login user or change its password.
+// scripts/user-set.ts <email> — change a user's password, or create the user (asks for the name).
 // Interactive (TTY): asks twice without echo. Piped stdin: reads the password once.
 import readline from 'node:readline';
 import { getDb, closeDb } from '@/lib/db/client';
-import { setUserPassword } from '@/lib/auth/users';
+import { eq } from 'drizzle-orm';
+import { users } from '@/lib/db/schema';
+import { createUser, findUserByEmail, setUserPassword } from '@/lib/auth/users';
+
+function promptVisible(question: string): Promise<string> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => rl.question(question, (a) => { rl.close(); resolve(a); }));
+}
 
 function promptHidden(question: string): Promise<string> {
   return new Promise((resolve) => {
@@ -28,11 +35,17 @@ async function readStdin(): Promise<string> {
 }
 
 async function main() {
-  const username = process.argv[2];
-  if (!username) {
-    console.error('uso: user-set <username>');
+  const email = process.argv[2];
+  if (!email) {
+    console.error('uso: user-set <email>');
     process.exit(1);
   }
+
+  const db = getDb();
+  const existing = await findUserByEmail(db, email);
+  // Piped stdin: first line = password, optional second line = name (new users only).
+  let name = '';
+  if (!existing && process.stdin.isTTY) name = (await promptVisible('Nome: ')).trim();
 
   let password: string;
   if (process.stdin.isTTY) {
@@ -43,12 +56,24 @@ async function main() {
       process.exit(1);
     }
   } else {
-    password = await readStdin();
+    const lines = (await readStdin()).split(/\r?\n/);
+    password = lines[0];
+    if (!existing) name = (lines[1] ?? '').trim();
   }
 
-  const result = await setUserPassword(getDb(), username, password);
+  if (existing) {
+    await setUserPassword(db, existing.id, password);
+    console.log(`senha de "${existing.email}" atualizada (sessões encerradas)`);
+  } else {
+    if (!name) {
+      console.error('usuário novo: informe o nome (prompt, ou segunda linha do stdin).');
+      process.exit(1);
+    }
+    const anyAdmin = await db.select({ id: users.id }).from(users).where(eq(users.role, 'admin')).get();
+    const u = await createUser(db, { email, name, password, role: anyAdmin ? 'member' : 'admin' });
+    console.log(`usuário "${u.email}" criado como ${u.role}`);
+  }
   closeDb();
-  console.log(result.created ? `usuário "${result.username}" criado` : `senha de "${result.username}" atualizada (sessões encerradas)`);
 }
 
 main().catch((e) => {

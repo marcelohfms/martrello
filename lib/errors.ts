@@ -12,7 +12,14 @@ export type ErrorCode =
   | 'NAME_CONFLICT'
   | 'INVALID_INPUT'
   | 'CROSS_PROJECT_DEPENDENCY'
-  | 'CYCLE_DETECTED';
+  | 'CYCLE_DETECTED'
+  | 'EMAIL_TAKEN'
+  | 'USER_NOT_FOUND'
+  | 'FORBIDDEN'
+  | 'TOKEN_INVALID'
+  | 'ASSIGNEE_REQUIRED'
+  | 'ASSIGNEE_NOT_MEMBER'
+  | 'LISTS_ARE_FIXED';
 
 export class MartrelloError extends Error {
   public readonly originalMessage: string;

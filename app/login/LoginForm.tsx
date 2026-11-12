@@ -20,8 +20,8 @@ export function LoginForm() {
       </div>
 
       <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
-        Usuário
-        <input name="username" autoComplete="username" required autoFocus className="field !text-[14px] font-normal" />
+        E-mail
+        <input name="email" type="email" autoComplete="username" required autoFocus className="field !text-[14px] font-normal" />
       </label>
 
       <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
