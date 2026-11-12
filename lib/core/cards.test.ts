@@ -11,16 +11,19 @@ import { addDependency } from './dependencies';
 import { listCardEvents } from './events';
 import { getStageList } from './stages';
 import { SYSTEM_ACTOR, type Actor } from '@/lib/access/actor';
-import { cards, users } from '@/lib/db/schema';
+import { cards, users, projectMembers } from '@/lib/db/schema';
 
 let db: Db;
 let close: () => void;
 let admin: Actor;
+let adminEmail: string;
 beforeEach(async () => {
   const t = makeTestDb();
   db = t.db;
   close = t.close;
-  admin = (await makeUser(db, { role: 'admin' })).actor;
+  const a = await makeUser(db, { role: 'admin' });
+  admin = a.actor;
+  adminEmail = a.user.email;
 });
 afterEach(() => close());
 
@@ -184,12 +187,81 @@ describe('cards', () => {
     const { p } = await setup();
     const c = await createCard(db, admin, { project: p.id, list: 'Fazendo', title: 't' });
     expect(c.completedAt).toBeNull();
+    const other = await createCard(db, admin, { project: p.id, list: 'Feito', title: 'já feito' });
     await moveCard(db, admin, c.id, { toList: 'Feito', position: 1 });
     const done = await getCardById(db, admin, c.id);
     expect(done.completedAt).toEqual(expect.any(Number));
-    expect(done.position).not.toBe(1); // movimento para Feito ignora position
+    // movimento para Feito ignora position: vai para o fim da lista
+    expect(done.position).toBe(other.position + 1000);
     await moveCard(db, admin, c.id, { toList: 'Fazendo' });
     expect((await getCardById(db, admin, c.id)).completedAt).toBeNull();
+  });
+
+  it('reordenar dentro de Feito mantém completedAt', async () => {
+    const { p } = await setup();
+    const c = await createCard(db, admin, { project: p.id, list: 'Feito', title: 't' });
+    db.update(cards).set({ completedAt: 123 }).where(eq(cards.id, c.id)).run();
+    await moveCard(db, admin, c.id, { toList: 'Feito', position: 1 });
+    const after = await getCardById(db, admin, c.id);
+    expect(after.completedAt).toBe(123);
+    const events = (await listCardEvents(db, admin, c.id)).filter((e) => e.type !== 'created' && e.type !== 'assignee');
+    expect(events).toEqual([]);
+  });
+
+  it('responsável desativado em Feito: arrastar para Fazendo passa para o ator', async () => {
+    const { p } = await setup();
+    const m = await memberOf(p.id);
+    const c = await createCard(db, admin, { project: p.id, list: 'Feito', title: 't', assignee: m.user.email });
+    db.update(users).set({ disabledAt: Date.now() }).where(eq(users.id, m.user.id)).run();
+    await expect(moveCard(db, SYSTEM_ACTOR, c.id, { toList: 'Fazendo' })).rejects.toMatchObject({ code: 'ASSIGNEE_REQUIRED' });
+    await moveCard(db, admin, c.id, { toList: 'Fazendo' });
+    const moved = await getCardById(db, admin, c.id);
+    expect(moved.assignee?.email).toBe(adminEmail);
+    const last = (await listCardEvents(db, admin, c.id)).at(-1)!;
+    expect([last.type, last.from, last.to]).toEqual(['assignee', m.user.email, adminEmail]);
+  });
+
+  it('responsável inelegível é mantido ao ir para Backlog ou Feito no mesmo projeto', async () => {
+    const { p } = await setup();
+    const m = await memberOf(p.id);
+    const c = await createCard(db, admin, { project: p.id, list: 'Feito', title: 't', assignee: m.user.email });
+    db.update(users).set({ disabledAt: Date.now() }).where(eq(users.id, m.user.id)).run();
+    await moveCard(db, admin, c.id, { toList: 'Backlog' });
+    expect((await getCardById(db, admin, c.id)).assigneeId).toBe(m.user.id);
+    await moveCard(db, SYSTEM_ACTOR, c.id, { toList: 'Feito' });
+    expect((await getCardById(db, admin, c.id)).assigneeId).toBe(m.user.id);
+  });
+
+  it('desarquivar card em A fazer com membro removido passa para o admin', async () => {
+    const { p } = await setup();
+    const m = await memberOf(p.id);
+    const c = await createCard(db, admin, { project: p.id, list: 'A fazer', title: 't', assignee: m.user.email });
+    await archiveCard(db, admin, c.id);
+    db.delete(projectMembers).where(eq(projectMembers.userId, m.user.id)).run();
+    await expect(unarchiveCard(db, SYSTEM_ACTOR, c.id)).rejects.toMatchObject({ code: 'ASSIGNEE_REQUIRED' });
+    expect((await getCardById(db, admin, c.id)).archivedAt).not.toBeNull();
+    await unarchiveCard(db, admin, c.id);
+    const after = await getCardById(db, admin, c.id);
+    expect(after.archivedAt).toBeNull();
+    expect(after.assignee?.email).toBe(adminEmail);
+    const tail = (await listCardEvents(db, admin, c.id)).slice(-2);
+    expect(tail.map((e) => [e.type, e.from, e.to])).toEqual([
+      ['unarchived', null, null],
+      ['assignee', m.user.email, adminEmail],
+    ]);
+  });
+
+  it('mover para A fazer de outro projeto com responsável não membro passa para o ator', async () => {
+    const { p: p1 } = await setup('p1');
+    const { p: p2 } = await setup('p2');
+    const m = await memberOf(p1.id);
+    const c = await createCard(db, admin, { project: p1.id, list: 'Fazendo', title: 't', assignee: m.user.email });
+    await expect(moveCard(db, SYSTEM_ACTOR, c.id, { toProject: p2.id, toList: 'A fazer' }))
+      .rejects.toMatchObject({ code: 'ASSIGNEE_REQUIRED' });
+    await moveCard(db, admin, c.id, { toProject: p2.id, toList: 'A fazer' });
+    const moved = await getCardById(db, admin, c.id);
+    expect(moved.projectId).toBe(p2.id);
+    expect(moved.assignee?.email).toBe(adminEmail);
   });
 
   it('rejects moving to a list in a different project', async () => {

@@ -11,7 +11,9 @@ import { getProjectByNameOrId } from './projects';
 import { getLabelByNameOrId } from './labels';
 import { getBlockedStatuses, type DependencyInfo } from './dependencies';
 import { STAGES, getStageList, resolveListRef } from './stages';
-import { ASSIGNEE_REQUIRED_MESSAGE, actorAsAssignee, resolveAssignee, userEmail } from './assignee';
+import {
+  ASSIGNEE_REQUIRED_MESSAGE, actorAsAssignee, assertActiveMember, isActiveMember, resolveAssignee, userEmail,
+} from './assignee';
 import { recordCardEvent } from './events';
 import type { Db } from './test-helpers';
 
@@ -48,6 +50,20 @@ async function resolveTargetList(db: Db, projectId: string, ref: string): Promis
     throw new MartrelloError('LIST_NOT_IN_PROJECT', `Lista '${ref}' não pertence ao projeto destino`);
   }
   return byId ?? resolveListRef(db, projectId, ref);
+}
+
+/**
+ * The assignee a card must have once it sits in `stage` of `projectId`. Backlog keeps whatever it
+ * has. Outside it the card needs someone: when it has nobody, or sits in A fazer/Fazendo with an
+ * assignee who is no longer an active member, the actor takes over (system → ASSIGNEE_REQUIRED).
+ * Feito keeps an ineligible assignee as the record of who did it.
+ */
+async function settleAssignee(
+  db: Db, actor: Actor, projectId: string, stage: Stage, currentId: string | null,
+): Promise<string | null> {
+  if (stage === 'backlog') return currentId;
+  if (currentId && (stage === 'done' || (await isActiveMember(db, projectId, currentId)))) return currentId;
+  return actorAsAssignee(actor);
 }
 
 async function reloadCard(db: Db, id: string): Promise<Card> {
@@ -182,17 +198,15 @@ export async function moveCard(
   const toList = await resolveTargetList(db, targetProjectId, target.toList);
   const projectChanged = targetProjectId !== card.projectId;
 
-  if (projectChanged && card.assigneeId) {
-    // The current assignee must be an active member of the destination project.
-    await resolveAssignee(db, targetProjectId, (await userEmail(db, card.assigneeId)) ?? card.assigneeId);
+  if (projectChanged && card.assigneeId && (toList.stage === 'backlog' || toList.stage === 'done')) {
+    // Backlog and Feito keep the assignee, so it must be an active member of the destination.
+    await assertActiveMember(db, targetProjectId, card.assigneeId);
   }
 
-  let assigneeId = card.assigneeId;
-  let autoAssigneeEmail: string | null = null;
-  if (toList.stage !== 'backlog' && !assigneeId) {
-    assigneeId = actorAsAssignee(actor);
-    autoAssigneeEmail = await userEmail(db, assigneeId);
-  }
+  const assigneeId = await settleAssignee(db, actor, targetProjectId, toList.stage, card.assigneeId);
+  const assigneeChanged = assigneeId !== card.assigneeId;
+  const prevEmail = assigneeChanged ? await userEmail(db, card.assigneeId) : null;
+  const nextEmail = assigneeChanged ? await userEmail(db, assigneeId) : null;
 
   const now = Date.now();
   const wasDone = fromList.stage === 'done';
@@ -220,8 +234,8 @@ export async function moveCard(
     if (fromList.stage !== toList.stage) {
       recordCardEvent(tx, { cardId: id, actor, type: 'stage', from: stageName(fromList.stage), to: stageName(toList.stage), at: now });
     }
-    if (assigneeId !== card.assigneeId) {
-      recordCardEvent(tx, { cardId: id, actor, type: 'assignee', from: null, to: autoAssigneeEmail, at: now });
+    if (assigneeChanged) {
+      recordCardEvent(tx, { cardId: id, actor, type: 'assignee', from: prevEmail, to: nextEmail, at: now });
     }
   });
 }
@@ -263,10 +277,18 @@ export async function archiveCard(db: Db, actor: Actor, id: string): Promise<voi
 export async function unarchiveCard(db: Db, actor: Actor, id: string): Promise<void> {
   const card = await loadVisibleCard(db, actor, id);
   if (card.archivedAt == null) return;
+  const list = await loadList(db, card.listId);
+  const assigneeId = await settleAssignee(db, actor, card.projectId, list.stage, card.assigneeId);
+  const assigneeChanged = assigneeId !== card.assigneeId;
+  const prevEmail = assigneeChanged ? await userEmail(db, card.assigneeId) : null;
+  const nextEmail = assigneeChanged ? await userEmail(db, assigneeId) : null;
   const now = Date.now();
   db.transaction((tx) => {
-    tx.update(cards).set({ archivedAt: null, updatedAt: now }).where(eq(cards.id, id)).run();
+    tx.update(cards).set({ archivedAt: null, assigneeId, updatedAt: now }).where(eq(cards.id, id)).run();
     recordCardEvent(tx, { cardId: id, actor, type: 'unarchived', at: now });
+    if (assigneeChanged) {
+      recordCardEvent(tx, { cardId: id, actor, type: 'assignee', from: prevEmail, to: nextEmail, at: now });
+    }
   });
 }
 
