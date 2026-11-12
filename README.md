@@ -132,7 +132,7 @@ Restart Claude Code. The `martrello_*` tools become available in every session.
 
 **Labels** — `martrello_create_label`, `martrello_add_label`, `martrello_remove_label`, `martrello_delete_label`
 
-**Sprint** — `martrello_start_sprint`, `martrello_add_to_sprint`, `martrello_move_in_sprint`, `martrello_remove_from_sprint`, `martrello_close_sprint`
+**Sprint** — each person has a weekly sprint (Monday–Sunday, São Paulo time) that opens and closes by itself and shows their cards in A fazer, Fazendo and Feito (done this week). Read it with `martrello_get_sprint`, `martrello_list_sprints`, `martrello_get_sprint_history`; change a card's stage with `martrello_move_card`.
 
 ---
 

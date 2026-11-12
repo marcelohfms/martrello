@@ -1,7 +1,7 @@
 // lib/core/cards.ts
 import { and, desc, eq, inArray, max, isNull, or, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
-import { cards, cardDependencies, lists, cardLabels, labels, sprintSlots, users, type Card, type Label, type List, type Stage } from '@/lib/db/schema';
+import { cards, cardDependencies, lists, cardLabels, labels, users, type Card, type Label, type List, type Stage } from '@/lib/db/schema';
 import { MartrelloError } from '@/lib/errors';
 import { actorUserId, type Actor } from '@/lib/access/actor';
 import { loadVisibleCard, visibleProjectIds } from '@/lib/access/guard';
@@ -223,9 +223,6 @@ export async function moveCard(
       updatedAt: now,
     }).where(eq(cards.id, id)).run();
 
-    // Sync sprint slot position to match the card's new project position
-    tx.update(sprintSlots).set({ position }).where(eq(sprintSlots.cardId, id)).run();
-
     if (projectChanged) {
       // Dependencies never cross projects: drop them all, in both directions.
       const deps = tx.select().from(cardDependencies)
@@ -278,7 +275,6 @@ export async function archiveCard(db: Db, actor: Actor, id: string): Promise<voi
   const now = Date.now();
   db.transaction((tx) => {
     tx.update(cards).set({ archivedAt: now, updatedAt: now }).where(eq(cards.id, id)).run();
-    tx.delete(sprintSlots).where(eq(sprintSlots.cardId, id)).run();
     recordCardEvent(tx, { cardId: id, actor, type: 'archived', at: now });
   });
 }

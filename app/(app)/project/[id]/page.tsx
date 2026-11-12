@@ -3,8 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
 import { getProject } from '@/lib/core/projects';
 import { getBlockedStatuses } from '@/lib/core/dependencies';
-import { getActiveSprintRow } from '@/lib/core/sprint';
-import { cards as cardsTbl, labels as labelsTbl, cardLabels, sprintSlots } from '@/lib/db/schema';
+import { cards as cardsTbl, labels as labelsTbl, cardLabels } from '@/lib/db/schema';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { BoardClient } from './BoardClient';
 import type { Column } from '@/components/Board';
@@ -41,17 +40,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const statuses = await getBlockedStatuses(db, cardRows.map((c) => c.id));
 
-  const activeSprint = await getActiveSprintRow(db);
-  const sprintCardIds = activeSprint
-    ? new Set(
-        (await db
-          .select({ cardId: sprintSlots.cardId })
-          .from(sprintSlots)
-          .where(eq(sprintSlots.sprintId, activeSprint.id))
-        ).map((s) => s.cardId),
-      )
-    : null;
-
   const totalCards = cardRows.length;
 
   const columns: Column[] = project.lists.map((list) => ({
@@ -63,7 +51,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       dueDate: c.dueDate,
       labels: labelsByCard.get(c.id) ?? [],
       isBlocked: statuses.get(c.id)?.isBlocked ?? false,
-      inSprint: sprintCardIds ? sprintCardIds.has(c.id) : undefined,
     })),
     quickCreate: { projectId: project.id, listId: list.id },
   }));

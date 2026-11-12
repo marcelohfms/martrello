@@ -86,32 +86,22 @@ export const cardDependencies = sqliteTable(
   }),
 );
 
-// Invariant: at most one row with closed_at IS NULL (one active sprint).
-// Not enforced by a partial unique index because SQLite treats NULLs as distinct
-// in UNIQUE indexes; enforced in lib/core/sprint.ts (startSprint guards against
-// an existing active sprint before insert).
-export const sprints = sqliteTable('sprints', {
-  id: text('id').primaryKey(),
-  name: text('name'),
-  startedAt: integer('started_at').notNull(),
-  closedAt: integer('closed_at'),
-  cardsSnapshot: text('cards_snapshot'),
-  // Nullable in SQL because of the migration; core always fills them.
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  weekStart: text('week_start'), // YYYY-MM-DD
-});
-
-export const sprintSlots = sqliteTable(
-  'sprint_slots',
+// One sprint per person per week (Monday–Sunday, São Paulo). The weekly sprint shows the
+// person's cards in A fazer/Fazendo/Feito; lib/core/sprint.ts opens and closes it.
+export const sprints = sqliteTable(
+  'sprints',
   {
-    cardId: text('card_id').primaryKey().references(() => cards.id, { onDelete: 'cascade' }),
-    sprintId: text('sprint_id').notNull().references(() => sprints.id, { onDelete: 'cascade' }),
-    sprintList: text('sprint_list', { enum: ['backlog', 'doing', 'done'] }).notNull(),
-    position: integer('position').notNull(),
-    addedAt: integer('added_at').notNull(),
+    id: text('id').primaryKey(),
+    name: text('name'),
+    startedAt: integer('started_at').notNull(),
+    closedAt: integer('closed_at'),
+    cardsSnapshot: text('cards_snapshot'),
+    // Nullable in SQL because of the migration; core always fills them.
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    weekStart: text('week_start'), // YYYY-MM-DD, the Monday
   },
   (t) => ({
-    bySprint: index('slots_by_sprint').on(t.sprintId),
+    byUserWeek: uniqueIndex('sprints_user_week_unique').on(t.userId, t.weekStart),
   }),
 );
 
@@ -197,8 +187,6 @@ export type Card = typeof cards.$inferSelect;
 export type Label = typeof labels.$inferSelect;
 export type CardDependency = typeof cardDependencies.$inferSelect;
 export type Sprint = typeof sprints.$inferSelect;
-export type SprintSlot = typeof sprintSlots.$inferSelect;
-export type SprintList = 'backlog' | 'doing' | 'done';
 export type Role = 'admin' | 'member';
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;

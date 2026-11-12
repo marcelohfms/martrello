@@ -3,7 +3,6 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarDays, Lock } from 'lucide-react';
 import { ProjectTag } from './ProjectTag';
-import { SprintToggle } from './SprintToggle';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
 
 export type CardData = {
@@ -15,8 +14,6 @@ export type CardData = {
   projectAcronym?: string;
   projectColor?: string;
   isBlocked: boolean;
-  /** Undefined when there is no active sprint, which hides the sprint button. */
-  inSprint?: boolean;
 };
 
 type Props = {
@@ -30,7 +27,6 @@ type Props = {
 export function Card({ card, variant = 'project', onClick, lifted = false }: Props) {
   const { revealed } = useProjectPrivacy();
   const showProjectTag = variant === 'sprint' && Boolean(card.projectAcronym);
-  const showSprintToggle = card.inSprint !== undefined && !lifted;
 
   const isOverdue = card.dueDate ? parseISO(card.dueDate) < new Date() : false;
   const dueDateFormatted = card.dueDate
@@ -61,8 +57,7 @@ export function Card({ card, variant = 'project', onClick, lifted = false }: Pro
         onClick={onClick}
         aria-label={ariaLabel}
         className={`
-          flex w-full cursor-pointer flex-col gap-2 rounded-[var(--radius-md)] py-2.5 pl-3 text-left
-          ${showSprintToggle ? 'pr-9' : 'pr-3'}
+          flex w-full cursor-pointer flex-col gap-2 rounded-[var(--radius-md)] px-3 py-2.5 text-left
         `}
       >
         <div className="flex items-start gap-2">
@@ -103,8 +98,6 @@ export function Card({ card, variant = 'project', onClick, lifted = false }: Pro
           </div>
         )}
       </button>
-
-      {showSprintToggle && <SprintToggle cardId={card.id} inSprint={card.inSprint!} />}
     </div>
   );
 }

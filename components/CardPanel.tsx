@@ -4,10 +4,9 @@ import { useEffect, useState, useTransition } from 'react';
 import useSWR from 'swr';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Archive, Check, Undo2, X, Zap } from 'lucide-react';
-import { updateCardAction, toggleLabelAction, archiveCardAction, addToSprintAction, removeFromSprintAction, addDependencyAction, removeDependencyAction } from '@/app/actions';
+import { Archive, Check, X } from 'lucide-react';
+import { updateCardAction, toggleLabelAction, archiveCardAction, addDependencyAction, removeDependencyAction } from '@/app/actions';
 import { DeadlinePicker } from './DeadlinePicker';
-import { sprintToggleLabel } from './SprintToggle';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -73,7 +72,6 @@ export function CardPanel({ cardId, onClose }: Props) {
     labels: Array<{ name: string; color: string }>;
     dependsOn: Array<{ id: string; title: string; isDone: boolean }>;
   };
-  const inSprint = data.inSprint as boolean | null;
   const allLabels = data.allLabels as Array<{ name: string; color: string }>;
   const presentNames = new Set(card.labels.map((l) => l.name));
   const dependsOn = card.dependsOn as Array<{ id: string; title: string; isDone: boolean }>;
@@ -249,20 +247,6 @@ export function CardPanel({ cardId, onClose }: Props) {
       </div>
 
       <footer className="flex flex-wrap items-center gap-1 border-t border-mt-line px-3 py-2">
-        {inSprint !== null && (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => start(async () => {
-              await (inSprint ? removeFromSprintAction(card.id) : addToSprintAction(card.id));
-              mutate();
-            })}
-            className="btn btn-ghost"
-          >
-            {inSprint ? <Undo2 size={15} strokeWidth={2} aria-hidden="true" /> : <Zap size={15} strokeWidth={2} aria-hidden="true" />}
-            {sprintToggleLabel(inSprint)}
-          </button>
-        )}
         <button type="button" onClick={() => start(async () => { await archiveCardAction(card.id); onClose(); })} className="btn btn-danger-ghost ml-auto">
           <Archive size={14} strokeWidth={2} aria-hidden="true" />
           Arquivar

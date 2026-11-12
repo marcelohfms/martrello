@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { List } from './List';
 import { Card, type CardData } from './Card';
-import { moveCardAction, moveInSprintAction } from '@/app/actions';
+import { moveCardAction } from '@/app/actions';
 
 export type Column = {
   id: string;
@@ -57,6 +57,8 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
       }
     }
     if (!toColId) return;
+    // The sprint orders each stage by deadline, so only a change of stage means anything there.
+    if (variant === 'sprint' && toColId === fromCol.id) return;
 
     const toCol = cols.find((c) => c.id === toColId)!;
 
@@ -73,10 +75,12 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
       return next;
     });
 
-    const position = (toCol.cards.findIndex((c) => c.id === beforeCardId) + 1) * 1000;
     if (variant === 'sprint') {
-      moveInSprintAction(String(active.id), toColId as 'backlog' | 'doing' | 'done', position);
+      // Sprint columns are stage keys (todo/doing/done): the card moves to that stage's list
+      // in its own project.
+      moveCardAction(String(active.id), toColId);
     } else {
+      const position = (toCol.cards.findIndex((c) => c.id === beforeCardId) + 1) * 1000;
       moveCardAction(String(active.id), toColId, position);
     }
   }

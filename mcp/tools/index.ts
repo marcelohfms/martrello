@@ -5,7 +5,6 @@ import { readTools } from './read';
 import { projectTools } from './projects';
 import { labelTools } from './labels';
 import { cardTools } from './cards';
-import { sprintTools } from './sprint';
 import { dependencyTools } from './dependencies';
 
 /** Who is calling: every tool acts on behalf of this actor. */
@@ -21,7 +20,6 @@ export const tools: MartrelloTool[] = [
   ...projectTools,
   ...labelTools,
   ...cardTools,
-  ...sprintTools,
   ...dependencyTools,
 ];
 

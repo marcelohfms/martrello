@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { listProjects, getProject } from '@/lib/core/projects';
 import { listLabels } from '@/lib/core/labels';
 import { searchCards } from '@/lib/core/cards';
-import { getActiveSprint, listSprints, getSprintHistory } from '@/lib/core/sprint';
+import { getMySprint, listSprints, getSprintHistory } from '@/lib/core/sprint';
 import type { MartrelloTool } from './index';
 
 export const readTools: MartrelloTool[] = [
@@ -33,10 +33,10 @@ export const readTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_get_sprint',
-      description: 'Retorna a sprint ativa com todos os cards agrupados por coluna (backlog/doing/done).',
+      description: 'Retorna a sprint da semana de quem chama (segunda a domingo, horário de São Paulo): as tarefas dela em A fazer e Fazendo, mais as concluídas na semana. Cada card traz stage (todo/doing/done). A sprint abre e fecha sozinha; para mudar um card de etapa use martrello_move_card.',
       inputSchema: { type: 'object', properties: {} },
     },
-    handler: async () => getActiveSprint(getDb()),
+    handler: async (_input, { actor }) => getMySprint(getDb(), actor),
   },
   {
     definition: {
@@ -71,24 +71,24 @@ export const readTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_list_sprints',
-      description: 'Lista sprints (ativa + fechadas) em ordem reversa por started_at.',
+      description: 'Lista as sprints semanais de quem chama (atual + fechadas), da mais recente para a mais antiga.',
       inputSchema: {
         type: 'object',
         properties: { limit: { type: 'integer', default: 20 } },
       },
     },
-    handler: async (input) => listSprints(getDb(), { limit: input.limit as number | undefined }),
+    handler: async (input, { actor }) => listSprints(getDb(), actor, { limit: input.limit as number | undefined }),
   },
   {
     definition: {
       name: 'martrello_get_sprint_history',
-      description: 'Retorna o snapshot de uma sprint encerrada.',
+      description: 'Retorna o snapshot de uma sprint encerrada de quem chama.',
       inputSchema: {
         type: 'object',
         required: ['sprint_id'],
         properties: { sprint_id: { type: 'string' } },
       },
     },
-    handler: async (input) => getSprintHistory(getDb(), String(input.sprint_id)),
+    handler: async (input, { actor }) => getSprintHistory(getDb(), actor, String(input.sprint_id)),
   },
 ];

@@ -1,14 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Card, type CardData } from './Card';
 import { ProjectTag } from './ProjectTag';
 import { ProjectPrivacyProvider } from './ProjectPrivacyContext';
-
-vi.mock('@/app/actions', () => ({
-  addToSprintAction: vi.fn(),
-  removeFromSprintAction: vi.fn(),
-}));
 
 const card: CardData = {
   id: 'c1',
@@ -53,32 +48,13 @@ describe('Card project tag', () => {
   });
 });
 
-describe('Card sprint button', () => {
-  it('offers sending to the sprint when the card is out of it', () => {
-    expect(render('project', { ...card, inSprint: false })).toContain('aria-label="Enviar para a Sprint"');
-  });
-
-  it('offers moving to the backlog when the card is in the sprint', () => {
-    const html = render('project', { ...card, inSprint: true });
-    expect(html).toContain('aria-label="Mover para o Backlog (tirar da Sprint)"');
-    expect(html).not.toContain('Enviar para a Sprint');
-  });
-
-  it('is hidden when there is no active sprint', () => {
-    const html = render('project', { ...card, inSprint: undefined });
-    expect(html).not.toContain('Enviar para a Sprint');
-    expect(html).not.toContain('Mover para o Backlog');
-  });
-
-  it('is hidden on the copy that follows the pointer during a drag', () => {
-    expect(render('sprint', { ...card, inSprint: true }, true)).not.toContain('Mover para o Backlog');
-  });
-
-  it('never nests a button inside the card button', () => {
-    const html = render('project', { ...card, inSprint: false });
-    const first = html.indexOf('<button');
-    const firstClose = html.indexOf('</button>');
-    expect(html.indexOf('<button', first + 1)).toBeGreaterThan(firstClose);
+describe('Card actions', () => {
+  it('has a single button and no sprint toggle', () => {
+    for (const variant of ['project', 'sprint'] as const) {
+      const html = render(variant);
+      expect(html.match(/<button/g)).toHaveLength(1);
+      expect(html).not.toContain('Sprint');
+    }
   });
 });
 

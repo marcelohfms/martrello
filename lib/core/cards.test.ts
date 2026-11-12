@@ -353,21 +353,7 @@ describe('cards', () => {
     ]);
   });
 
-  it('archive removes sprint slot if present', async () => {
-    const { p } = await setup();
-    const c = await createCard(db, admin, { project: p.id, title: 't' });
-    const { sprints, sprintSlots } = await import('@/lib/db/schema');
-    const { ulid } = await import('ulidx');
-    const sid = ulid();
-    await db.insert(sprints).values({ id: sid, startedAt: Date.now() });
-    await db.insert(sprintSlots).values({ cardId: c.id, sprintId: sid, sprintList: 'backlog', position: 1000, addedAt: Date.now() });
-
-    await archiveCard(db, admin, c.id);
-    const slots = await db.select().from(sprintSlots).where(eq(sprintSlots.cardId, c.id));
-    expect(slots).toHaveLength(0);
-  });
-
-  it('unarchive does not restore sprint slot', async () => {
+  it('unarchive clears archivedAt', async () => {
     const { p } = await setup();
     const c = await createCard(db, admin, { project: p.id, title: 't' });
     await archiveCard(db, admin, c.id);

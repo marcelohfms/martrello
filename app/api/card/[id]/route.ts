@@ -6,7 +6,6 @@ import { MartrelloError } from '@/lib/errors';
 import { getCardById, searchCards } from '@/lib/core/cards';
 import { listLabels } from '@/lib/core/labels';
 import { getCycleFreeCandidates } from '@/lib/core/dependencies';
-import { getCardSprintState } from '@/lib/core/sprint';
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,6 +27,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const candidateCards = otherCards
     .filter((c) => cycleFreeIds.has(c.id))
     .map((c) => ({ id: c.id, title: c.title }));
-  const inSprint = await getCardSprintState(db, id);
-  return NextResponse.json({ card, allLabels, candidateCards, inSprint });
+  return NextResponse.json({ card, allLabels, candidateCards });
 }

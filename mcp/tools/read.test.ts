@@ -56,3 +56,24 @@ describe('read tools visibility', () => {
     await expect(get('martrello_get_project').handler({ project: 'fechado' }, mctx)).rejects.toThrow(/PROJECT_NOT_FOUND/);
   });
 });
+
+describe('sprint tools', () => {
+  it('get_sprint devolve a sprint de quem chama, e o histórico de outro não aparece', async () => {
+    const p = await createProject(db, ctx.actor, { name: 'proj' });
+    const { user, actor } = await makeUser(db);
+    addMemberRow(db, p.id, user.id);
+    const mine = await createCard(db, ctx.actor, { project: p.id, list: 'todo', title: 'minha', assignee: user.id });
+    await createCard(db, ctx.actor, { project: p.id, list: 'todo', title: 'do admin' });
+    const mctx: ToolCtx = { actor };
+    const get = (n: string) => readTools.find((t) => t.definition.name === n)!;
+
+    const s = (await get('martrello_get_sprint').handler({}, mctx)) as { id: string; userId: string; cards: Array<{ id: string }> };
+    expect(s.userId).toBe(user.id);
+    expect(s.cards.map((c) => c.id)).toEqual([mine.id]);
+
+    const listed = (await get('martrello_list_sprints').handler({}, mctx)) as Array<{ id: string }>;
+    expect(listed.map((x) => x.id)).toEqual([s.id]);
+    const adminSprint = (await get('martrello_get_sprint').handler({}, ctx)) as { id: string };
+    await expect(get('martrello_get_sprint_history').handler({ sprint_id: adminSprint.id }, mctx)).rejects.toThrow(/SPRINT_NOT_FOUND/);
+  });
+});
