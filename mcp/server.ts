@@ -3,8 +3,9 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { tools, findTool } from './tools';
 import { MartrelloError } from '@/lib/errors';
+import type { Actor } from '@/lib/access/actor';
 
-export function createServer() {
+export function createServer(actor: Actor) {
   const server = new Server(
     { name: 'martrello', version: '0.1.0' },
     { capabilities: { tools: {} } },
@@ -23,7 +24,7 @@ export function createServer() {
       };
     }
     try {
-      const result = await tool.handler(req.params.arguments ?? {});
+      const result = await tool.handler(req.params.arguments ?? {}, { actor });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (e) {
       const payload = e instanceof MartrelloError ? e.toJSON() : { error: 'INTERNAL', message: (e as Error).message };

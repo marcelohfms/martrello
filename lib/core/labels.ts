@@ -3,9 +3,13 @@ import { and, eq, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
 import { labels, cardLabels, type Label } from '@/lib/db/schema';
 import { MartrelloError, suggestClosest } from '@/lib/errors';
+import type { Actor } from '@/lib/access/actor';
+import { assertAdmin, loadVisibleCard } from '@/lib/access/guard';
+import { recordCardEvent } from './events';
 import type { Db } from './test-helpers';
 
-export async function createLabel(db: Db, name: string, color: string): Promise<Label> {
+/** Labels are global: any user may create one. */
+export async function createLabel(db: Db, _actor: Actor, name: string, color: string): Promise<Label> {
   const existing = await db.select().from(labels).where(eq(labels.name, name));
   if (existing.length > 0) throw new MartrelloError('NAME_CONFLICT', `Label '${name}' já existe`);
   const id = ulid();
@@ -34,17 +38,32 @@ export async function getLabelByNameOrId(db: Db, nameOrId: string): Promise<Labe
   return found;
 }
 
-export async function addLabelToCard(db: Db, cardId: string, labelNameOrId: string): Promise<void> {
+export async function addLabelToCard(db: Db, actor: Actor, cardId: string, labelNameOrId: string): Promise<void> {
+  await loadVisibleCard(db, actor, cardId);
   const label = await getLabelByNameOrId(db, labelNameOrId);
-  await db.insert(cardLabels).values({ cardId, labelId: label.id }).onConflictDoNothing();
+  db.transaction((tx) => {
+    const res = tx.insert(cardLabels).values({ cardId, labelId: label.id }).onConflictDoNothing().run();
+    if (res.changes > 0) recordCardEvent(tx, { cardId, actor, type: 'label_added', to: label.name });
+  });
 }
 
-export async function removeLabelFromCard(db: Db, cardId: string, labelNameOrId: string): Promise<void> {
+export async function removeLabelFromCard(db: Db, actor: Actor, cardId: string, labelNameOrId: string): Promise<void> {
+  await loadVisibleCard(db, actor, cardId);
   const label = await getLabelByNameOrId(db, labelNameOrId);
-  await db.delete(cardLabels).where(and(eq(cardLabels.cardId, cardId), eq(cardLabels.labelId, label.id)));
+  db.transaction((tx) => {
+    const res = tx.delete(cardLabels).where(and(eq(cardLabels.cardId, cardId), eq(cardLabels.labelId, label.id))).run();
+    if (res.changes > 0) recordCardEvent(tx, { cardId, actor, type: 'label_removed', from: label.name });
+  });
 }
 
-export async function deleteLabel(db: Db, nameOrId: string): Promise<void> {
+/** Admin only. Every card that loses the label gets a `label_removed` event. */
+export async function deleteLabel(db: Db, actor: Actor, nameOrId: string): Promise<void> {
+  assertAdmin(actor);
   const label = await getLabelByNameOrId(db, nameOrId);
-  await db.delete(labels).where(eq(labels.id, label.id));
+  const tagged = await db.select({ cardId: cardLabels.cardId }).from(cardLabels).where(eq(cardLabels.labelId, label.id));
+  const now = Date.now();
+  db.transaction((tx) => {
+    for (const { cardId } of tagged) recordCardEvent(tx, { cardId, actor, type: 'label_removed', from: label.name, at: now });
+    tx.delete(labels).where(eq(labels.id, label.id)).run();
+  });
 }

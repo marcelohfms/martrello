@@ -2,6 +2,7 @@
 import { getDb, closeDb } from '@/lib/db/client';
 import { listProjects, updateProject, PROJECT_COLOR_PALETTE } from '@/lib/core/projects';
 import { suggestAcronym } from '@/lib/core/acronym';
+import { SYSTEM_ACTOR } from '@/lib/access/actor';
 
 // NOTE: this is a one-off script that has already been run successfully against
 // the real dev DB. It unconditionally recolors every project on every run (by
@@ -24,7 +25,7 @@ async function main() {
     colorIndex += 1;
 
     if (Object.keys(patch).length > 0) {
-      await updateProject(db, p.id, patch);
+      await updateProject(db, SYSTEM_ACTOR, p.id, patch);
       console.log(`~ ${p.name}: acronym=${patch.acronym ?? '(mantido: ' + p.acronym + ')'}, color=${patch.color}`);
     }
   }

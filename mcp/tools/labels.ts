@@ -14,7 +14,7 @@ export const labelTools: MartrelloTool[] = [
         properties: { name: { type: 'string' }, color: { type: 'string' } },
       },
     },
-    handler: async (input) => createLabel(getDb(), String(input.name), String(input.color)),
+    handler: async (input, { actor }) => createLabel(getDb(), actor, String(input.name), String(input.color)),
   },
   {
     definition: {
@@ -26,8 +26,8 @@ export const labelTools: MartrelloTool[] = [
         properties: { card_id: { type: 'string' }, label: { type: 'string' } },
       },
     },
-    handler: async (input) => {
-      await addLabelToCard(getDb(), String(input.card_id), String(input.label));
+    handler: async (input, { actor }) => {
+      await addLabelToCard(getDb(), actor, String(input.card_id), String(input.label));
       return { ok: true };
     },
   },
@@ -41,23 +41,23 @@ export const labelTools: MartrelloTool[] = [
         properties: { card_id: { type: 'string' }, label: { type: 'string' } },
       },
     },
-    handler: async (input) => {
-      await removeLabelFromCard(getDb(), String(input.card_id), String(input.label));
+    handler: async (input, { actor }) => {
+      await removeLabelFromCard(getDb(), actor, String(input.card_id), String(input.label));
       return { ok: true };
     },
   },
   {
     definition: {
       name: 'martrello_delete_label',
-      description: 'Deleta label globalmente (remove de todos os cards).',
+      description: 'Deleta label globalmente (remove de todos os cards). Só admin.',
       inputSchema: {
         type: 'object',
         required: ['label'],
         properties: { label: { type: 'string' } },
       },
     },
-    handler: async (input) => {
-      await deleteLabel(getDb(), String(input.label));
+    handler: async (input, { actor }) => {
+      await deleteLabel(getDb(), actor, String(input.label));
       return { ok: true };
     },
   },

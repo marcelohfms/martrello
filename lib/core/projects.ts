@@ -6,6 +6,8 @@ import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
 import { suggestAcronym } from './acronym';
 import { STAGES } from './stages';
+import type { Actor } from '@/lib/access/actor';
+import { assertAdmin } from '@/lib/access/guard';
 
 
 export const PROJECT_COLOR_PALETTE = [
@@ -15,8 +17,10 @@ export const PROJECT_COLOR_PALETTE = [
 
 export async function createProject(
   db: Db,
+  actor: Actor,
   input: { name: string; color?: string; acronym?: string },
 ): Promise<Project> {
+  assertAdmin(actor);
   const existing = await db.select().from(projects).where(eq(projects.name, input.name));
   if (existing.length > 0) {
     throw new MartrelloError('NAME_CONFLICT', `Já existe projeto chamado '${input.name}'`);
@@ -117,9 +121,11 @@ export async function getProjectByNameOrId(
 
 export async function updateProject(
   db: Db,
+  actor: Actor,
   id: string,
   patch: { name?: string; color?: string; acronym?: string },
 ): Promise<Project> {
+  assertAdmin(actor);
   if (patch.name) {
     const conflict = await db
       .select()
@@ -155,13 +161,15 @@ export async function updateProject(
   return row;
 }
 
-export async function archiveProject(db: Db, id: string): Promise<void> {
+export async function archiveProject(db: Db, actor: Actor, id: string): Promise<void> {
+  assertAdmin(actor);
   const found = (await db.select().from(projects).where(eq(projects.id, id)))[0];
   if (!found) throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto ${id} não existe`);
   await db.update(projects).set({ archivedAt: Date.now() }).where(eq(projects.id, id));
 }
 
-export async function reorderProjects(db: Db, orderedIds: string[]): Promise<void> {
+export async function reorderProjects(db: Db, actor: Actor, orderedIds: string[]): Promise<void> {
+  assertAdmin(actor);
   db.transaction((tx) => {
     const renumbered = renumber(orderedIds);
     for (const r of renumbered) {

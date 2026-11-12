@@ -1,9 +1,12 @@
 import { asc, eq } from 'drizzle-orm';
-import { ulid } from 'ulidx';
+import { monotonicFactory } from 'ulidx';
 import { cardEvents, users } from '@/lib/db/schema';
 import { actorUserId, type Actor } from '@/lib/access/actor';
 import { loadVisibleCard } from '@/lib/access/guard';
-import type { Db } from './test-helpers';
+import type { Db, SyncDb } from './test-helpers';
+
+// Monotonic so events recorded in the same millisecond keep their insertion order.
+const eventId = monotonicFactory();
 
 export type CardEventType =
   | 'created' | 'title' | 'description' | 'due_date' | 'stage' | 'project' | 'assignee'
@@ -12,12 +15,12 @@ export type CardEventType =
 
 /** Synchronous (.run()) so it can be called inside `db.transaction((tx) => ...)`. */
 export function recordCardEvent(
-  db: Db,
+  db: SyncDb,
   e: { cardId: string; actor: Actor; type: CardEventType; from?: string | null; to?: string | null; at?: number },
 ): void {
   db.insert(cardEvents)
     .values({
-      id: ulid(),
+      id: eventId(),
       cardId: e.cardId,
       actorId: actorUserId(e.actor),
       type: e.type,

@@ -2,16 +2,13 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { cardDependencies, cards, lists, type CardDependency } from '@/lib/db/schema';
 import { MartrelloError } from '@/lib/errors';
+import type { Actor } from '@/lib/access/actor';
+import { loadVisibleCard } from '@/lib/access/guard';
+import { recordCardEvent } from './events';
 import type { Db } from './test-helpers';
 
 export type DependencyInfo = { id: string; title: string; isDone: boolean };
 export type BlockedStatus = { isBlocked: boolean; dependsOn: DependencyInfo[] };
-
-async function loadCardOrThrow(db: Db, id: string) {
-  const card = (await db.select().from(cards).where(eq(cards.id, id)))[0];
-  if (!card) throw new MartrelloError('CARD_NOT_FOUND', `Card ${id} não existe`);
-  return card;
-}
 
 // BFS from blockerCardId following "is blocked by" edges. If blockedCardId is
 // reachable, it means blockerCardId already (transitively) depends on
@@ -49,31 +46,40 @@ export async function getCycleFreeCandidates(
 
 export async function addDependency(
   db: Db,
+  actor: Actor,
   blockedCardId: string,
   blockerCardId: string,
 ): Promise<CardDependency> {
   if (blockedCardId === blockerCardId) {
     throw new MartrelloError('INVALID_INPUT', 'Um card não pode depender de si mesmo');
   }
-  const blocked = await loadCardOrThrow(db, blockedCardId);
-  const blocker = await loadCardOrThrow(db, blockerCardId);
+  const blocked = await loadVisibleCard(db, actor, blockedCardId);
+  const blocker = await loadVisibleCard(db, actor, blockerCardId);
   if (blocked.projectId !== blocker.projectId) {
     throw new MartrelloError('CROSS_PROJECT_DEPENDENCY', 'Dependências só podem ser criadas entre cards do mesmo projeto');
   }
   if (await wouldCreateCycle(db, blockedCardId, blockerCardId)) {
     throw new MartrelloError('CYCLE_DETECTED', 'Essa dependência criaria um ciclo');
   }
-  await db.insert(cardDependencies).values({ blockedCardId, blockerCardId, createdAt: Date.now() }).onConflictDoNothing();
+  db.transaction((tx) => {
+    const res = tx.insert(cardDependencies).values({ blockedCardId, blockerCardId, createdAt: Date.now() }).onConflictDoNothing().run();
+    if (res.changes > 0) recordCardEvent(tx, { cardId: blockedCardId, actor, type: 'dependency_added', to: blockerCardId });
+  });
   return (await db
     .select()
     .from(cardDependencies)
     .where(and(eq(cardDependencies.blockedCardId, blockedCardId), eq(cardDependencies.blockerCardId, blockerCardId))))[0];
 }
 
-export async function removeDependency(db: Db, blockedCardId: string, blockerCardId: string): Promise<void> {
-  await db
-    .delete(cardDependencies)
-    .where(and(eq(cardDependencies.blockedCardId, blockedCardId), eq(cardDependencies.blockerCardId, blockerCardId)));
+export async function removeDependency(db: Db, actor: Actor, blockedCardId: string, blockerCardId: string): Promise<void> {
+  await loadVisibleCard(db, actor, blockedCardId);
+  db.transaction((tx) => {
+    const res = tx
+      .delete(cardDependencies)
+      .where(and(eq(cardDependencies.blockedCardId, blockedCardId), eq(cardDependencies.blockerCardId, blockerCardId)))
+      .run();
+    if (res.changes > 0) recordCardEvent(tx, { cardId: blockedCardId, actor, type: 'dependency_removed', from: blockerCardId });
+  });
 }
 
 export async function getBlockedStatuses(db: Db, cardIds: string[]): Promise<Map<string, BlockedStatus>> {
@@ -87,17 +93,12 @@ export async function getBlockedStatuses(db: Db, cardIds: string[]): Promise<Map
   const blockerCards = await db.select().from(cards).where(inArray(cards.id, blockerIds));
   const blockerById = new Map(blockerCards.map((c) => [c.id, c]));
 
-  const projectIds = [...new Set(blockerCards.map((c) => c.projectId))];
-  const listRows = projectIds.length ? await db.select().from(lists).where(inArray(lists.projectId, projectIds)) : [];
-  const lastListIdByProject = new Map<string, string>();
-  const lastPosByProject = new Map<string, number>();
-  for (const l of listRows) {
-    const cur = lastPosByProject.get(l.projectId) ?? -Infinity;
-    if (l.position > cur) {
-      lastPosByProject.set(l.projectId, l.position);
-      lastListIdByProject.set(l.projectId, l.id);
-    }
-  }
+  // "Done" = archived or sitting in the project's Feito stage.
+  const listIds = [...new Set(blockerCards.map((c) => c.listId))];
+  const doneListIds = new Set(
+    (listIds.length ? await db.select().from(lists).where(and(inArray(lists.id, listIds), eq(lists.stage, 'done'))) : [])
+      .map((l) => l.id),
+  );
 
   for (const cardId of cardIds) {
     const deps = depRows.filter((d) => d.blockedCardId === cardId);
@@ -105,7 +106,7 @@ export async function getBlockedStatuses(db: Db, cardIds: string[]): Promise<Map
     const dependsOn: DependencyInfo[] = deps.map((d) => {
       const blocker = blockerById.get(d.blockerCardId);
       if (!blocker) return { id: d.blockerCardId, title: '(removido)', isDone: true };
-      const isDone = blocker.archivedAt != null || blocker.listId === lastListIdByProject.get(blocker.projectId);
+      const isDone = blocker.archivedAt != null || doneListIds.has(blocker.listId);
       return { id: blocker.id, title: blocker.title, isDone };
     });
     result.set(cardId, { isBlocked: dependsOn.some((d) => !d.isDone), dependsOn });

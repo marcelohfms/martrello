@@ -1,6 +1,7 @@
 // lib/core/sprint.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
+import { SYSTEM_ACTOR } from '@/lib/access/actor';
 import { createProject, getProjectByNameOrId } from './projects';
 import { createCard, getCardById, updateCard } from './cards';
 import {
@@ -13,9 +14,9 @@ let close: () => void;
 beforeEach(() => { const t = makeTestDb(); db = t.db; close = t.close; });
 
 async function makeCard(project = 'p') {
-  await createProject(db, { name: project }).catch(() => {});
+  await createProject(db, SYSTEM_ACTOR, { name: project }).catch(() => {});
   const full = await getProjectByNameOrId(db, project);
-  return createCard(db, { project, title: `task-${Math.random().toString(36).slice(2, 6)}`, list: full.lists[0].id });
+  return createCard(db, SYSTEM_ACTOR, { project, title: `task-${Math.random().toString(36).slice(2, 6)}`, list: full.lists[0].id });
 }
 
 describe('sprint ordering', () => {
@@ -25,9 +26,9 @@ describe('sprint ordering', () => {
     const undated = await makeCard();
     const soon = await makeCard();
     const soonToo = await makeCard();
-    await updateCard(db, late.id, { dueDate: '2026-11-24' });
-    await updateCard(db, soon.id, { dueDate: '2026-11-11' });
-    await updateCard(db, soonToo.id, { dueDate: '2026-11-11' });
+    await updateCard(db, SYSTEM_ACTOR, late.id, { dueDate: '2026-11-24' });
+    await updateCard(db, SYSTEM_ACTOR, soon.id, { dueDate: '2026-11-11' });
+    await updateCard(db, SYSTEM_ACTOR, soonToo.id, { dueDate: '2026-11-11' });
     for (const c of [late, undated, soon, soonToo]) await addToSprint(db, c.id);
 
     const active = await getActiveSprint(db);
@@ -117,7 +118,7 @@ describe('sprint', () => {
     expect(result.opened).toBeDefined();
 
     // a is archived
-    const archived = await getCardById(db, a.id);
+    const archived = await getCardById(db, SYSTEM_ACTOR, a.id);
     expect(archived.archivedAt).not.toBeNull();
 
     // active sprint exists, with b in 'doing' and c in 'backlog'
@@ -170,9 +171,9 @@ describe('sprint', () => {
   });
 
   it('sprint cards report the project acronym', async () => {
-    const p = await createProject(db, { name: 'Nubank' });
+    const p = await createProject(db, SYSTEM_ACTOR, { name: 'Nubank' });
     const full = await getProjectByNameOrId(db, p.id);
-    const c = await createCard(db, { project: p.id, title: 'x', list: full.lists[0].id });
+    const c = await createCard(db, SYSTEM_ACTOR, { project: p.id, title: 'x', list: full.lists[0].id });
     await startSprint(db);
     await addToSprint(db, c.id);
     const active = await getActiveSprint(db);
@@ -185,7 +186,7 @@ describe('sprint', () => {
     const c1 = await makeCard();
     const c2 = await makeCard();
     const { addDependency } = await import('./dependencies');
-    await addDependency(db, c2.id, c1.id);
+    await addDependency(db, SYSTEM_ACTOR, c2.id, c1.id);
     await startSprint(db);
     await addToSprint(db, c1.id);
     await addToSprint(db, c2.id);

@@ -1,6 +1,8 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
+import type { RunResult } from 'better-sqlite3';
 import * as schema from '@/lib/db/schema';
 import { users, projectMembers, type Role, type User } from '@/lib/db/schema';
 import type { Actor } from '@/lib/access/actor';
@@ -38,3 +40,6 @@ export async function makeUser(
 export function addMemberRow(db: Db, projectId: string, userId: string): void {
   db.insert(projectMembers).values({ projectId, userId, addedAt: Date.now() }).run();
 }
+
+/** A sync drizzle handle: the database itself or a transaction opened on it. */
+export type SyncDb = BaseSQLiteDatabase<'sync', RunResult, typeof schema>;
