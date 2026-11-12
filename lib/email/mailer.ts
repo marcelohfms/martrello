@@ -22,6 +22,11 @@ export async function sendEmail(msg: EmailMessage): Promise<'sent' | 'disabled'>
 }
 
 export function appUrl(path: string): string {
-  const base = (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
+  let raw = process.env.APP_URL;
+  if (!raw) {
+    if (process.env.NODE_ENV === 'production') throw new Error('APP_URL não configurada');
+    raw = 'http://localhost:3000';
+  }
+  const base = raw.replace(/\/+$/, '');
   return `${base}${path}`;
 }

@@ -6,7 +6,7 @@ import type { Db } from '@/lib/core/test-helpers';
 import type { Actor } from '@/lib/access/actor';
 import { assertAdmin } from '@/lib/access/guard';
 import { hashToken, type SessionUser } from './sessions';
-import { createUser, findUserByEmail, normalizeEmail, setUserPassword } from './users';
+import { assertPassword, createUser, findUserByEmail, normalizeEmail, setUserPassword } from './users';
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const RESET_TTL_MS = 60 * 60 * 1000;
@@ -44,8 +44,22 @@ async function loadLive(db: Db, kind: Kind, token: string, now: number) {
     .get();
 }
 
-async function markUsed(db: Db, idHash: string, now: number): Promise<void> {
-  await db.update(authTokens).set({ usedAt: now }).where(eq(authTokens.idHash, idHash));
+/** Atomically consumes the token; throws TOKEN_INVALID if someone else got there first. */
+async function claim(db: Db, kind: Kind, idHash: string, now: number): Promise<void> {
+  const rows = await db
+    .update(authTokens)
+    .set({ usedAt: now })
+    .where(
+      and(
+        eq(authTokens.idHash, idHash),
+        eq(authTokens.kind, kind),
+        isNull(authTokens.usedAt),
+        isNull(authTokens.revokedAt),
+        gt(authTokens.expiresAt, now),
+      ),
+    )
+    .returning({ id: authTokens.idHash });
+  if (rows.length === 0) throw invalid();
 }
 
 async function issueInvite(db: Db, actor: Actor, email: string, name: string, now: number) {
@@ -91,7 +105,7 @@ export async function resendInvite(
   const row = await db
     .select()
     .from(authTokens)
-    .where(and(eq(authTokens.idHash, inviteId), eq(authTokens.kind, 'invite'), isNull(authTokens.usedAt)))
+    .where(and(eq(authTokens.idHash, inviteId), eq(authTokens.kind, 'invite'), isNull(authTokens.usedAt), isNull(authTokens.revokedAt)))
     .get();
   if (!row) throw new MartrelloError('TOKEN_INVALID', 'Convite não encontrado.');
   if (await findUserByEmail(db, row.email)) {
@@ -140,9 +154,21 @@ export async function acceptInvite(
 ): Promise<SessionUser> {
   const row = await loadLive(db, 'invite', token, now);
   if (!row) throw invalid();
-  // createUser validates the password and the e-mail before anything is consumed.
-  const user = await createUser(db, { email: row.email, name: row.name ?? row.email, password, role: 'member' });
-  await markUsed(db, row.idHash, now);
+  // Cheap validation first so a failure never consumes the invite.
+  assertPassword(password);
+  if (await findUserByEmail(db, row.email)) {
+    throw new MartrelloError('EMAIL_TAKEN', `já existe um usuário com o e-mail ${row.email}`);
+  }
+  await claim(db, 'invite', row.idHash, now);
+  let user;
+  try {
+    user = await createUser(db, { email: row.email, name: row.name ?? row.email, password, role: 'member' });
+  } catch (e) {
+    if (e instanceof Error && /UNIQUE/i.test(e.message)) {
+      throw new MartrelloError('EMAIL_TAKEN', `já existe um usuário com o e-mail ${row.email}`);
+    }
+    throw e;
+  }
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
@@ -178,8 +204,9 @@ export async function resetPassword(
   if (!row || !row.userId) throw invalid();
   const user = await db.select().from(users).where(eq(users.id, row.userId)).get();
   if (!user || user.disabledAt !== null) throw invalid();
-  // Validates the password first: a too-short one throws and leaves the token usable.
+  // Validate first: a too-short password throws and leaves the token usable.
+  assertPassword(password);
+  await claim(db, 'reset', row.idHash, now);
   await setUserPassword(db, user.id, password);
-  await markUsed(db, row.idHash, now);
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }

@@ -73,13 +73,18 @@ export async function forgotPasswordAction(_prev: FormState, formData: FormData)
   resetLimiter.recordFailure(emailKey);
   if (limited) return done;
 
+  let token: string | null = null;
   try {
-    const token = await requestPasswordReset(getDb(), email);
-    if (token) {
-      await sendEmail({ to: email, ...resetEmail({ link: appUrl(`/redefinir-senha/${token}`) }) });
-    }
+    token = await requestPasswordReset(getDb(), email);
   } catch (e) {
-    console.error(`[email] falha: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`[auth] falha ao pedir redefinição: ${e instanceof Error ? e.message : String(e)}`);
+    return done;
+  }
+  if (token) {
+    // Not awaited: the Resend round trip must not reveal whether the account exists.
+    void Promise.resolve()
+      .then(() => sendEmail({ to: email, ...resetEmail({ link: appUrl(`/redefinir-senha/${token}`) }) }))
+      .catch((e) => console.error(`[email] falha: ${e instanceof Error ? e.message : String(e)}`));
   }
   return done;
 }

@@ -13,7 +13,7 @@ export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-function assertPassword(plain: string): void {
+export function assertPassword(plain: string): void {
   if (plain.length < MIN_PASSWORD_LENGTH) {
     throw new MartrelloError('INVALID_INPUT', `senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`);
   }

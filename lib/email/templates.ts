@@ -9,8 +9,8 @@ type Content = Omit<EmailMessage, 'to'>;
 export function inviteEmail(input: { name: string; link: string }): Content {
   return {
     subject: 'Convite para o Martrello',
-    text: `Olá, ${input.name}!\n\nVocê foi convidado para o Martrello. Crie sua senha pelo link abaixo (vale por 7 dias):\n\n${input.link}\n`,
-    html: `<p>Olá, ${esc(input.name)}!</p><p>Você foi convidado para o Martrello. Crie sua senha pelo link abaixo (vale por 7 dias):</p><p><a href="${esc(input.link)}">Criar minha senha</a></p>`,
+    text: `Olá, ${input.name}.\n\nVocê foi convidado para o Martrello. Crie sua senha pelo link abaixo (vale por 7 dias):\n\n${input.link}\n`,
+    html: `<p>Olá, ${esc(input.name)}.</p><p>Você foi convidado para o Martrello. Crie sua senha pelo link abaixo (vale por 7 dias):</p><p><a href="${esc(input.link)}">Criar minha senha</a></p>`,
   };
 }
 

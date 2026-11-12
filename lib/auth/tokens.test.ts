@@ -98,6 +98,28 @@ describe('convites', () => {
     close();
   });
 
+  it('reenviar convite revogado → TOKEN_INVALID; expirado ainda pode', async () => {
+    const admin = await makeUser(db, { role: 'admin' });
+    const a = await createInvite(db, admin.actor, { email: 'a@t.local', name: 'A' }, T0);
+    const b = await createInvite(db, admin.actor, { email: 'b@t.local', name: 'B' }, T0);
+    await cancelInvite(db, admin.actor, a.inviteId);
+    await expect(resendInvite(db, admin.actor, a.inviteId, T0 + 1)).rejects.toThrow(/TOKEN_INVALID/);
+    const c = await createInvite(db, admin.actor, { email: 'b@t.local', name: 'B' }, T0 + 2);
+    await expect(resendInvite(db, admin.actor, b.inviteId, T0 + 3)).rejects.toThrow(/TOKEN_INVALID/);
+    await resendInvite(db, admin.actor, c.inviteId, T0 + INVITE_TTL_MS + 10);
+    close();
+  });
+
+  it('dois aceites concorrentes: só um passa', async () => {
+    const admin = await makeUser(db, { role: 'admin' });
+    const { token } = await createInvite(db, admin.actor, { email: 'a@t.local', name: 'A' }, T0);
+    const r = await Promise.allSettled([acceptInvite(db, token, PW, T0 + 1), acceptInvite(db, token, PW, T0 + 1)]);
+    expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+    const lost = r.find((x) => x.status === 'rejected') as PromiseRejectedResult;
+    expect(String(lost.reason)).toMatch(/TOKEN_INVALID/);
+    close();
+  });
+
   it('membro não convida nem lista', async () => {
     const bob = await makeUser(db);
     await expect(createInvite(db, bob.actor, { email: 'x@t.local', name: 'X' })).rejects.toThrow(/FORBIDDEN/);
@@ -128,6 +150,19 @@ describe('redefinição de senha', () => {
     expect(await validateSession(db, sess.token)).toBeNull();
     expect(await authenticate(db, 'a@t.local', 'outra-senha-longa')).not.toBeNull();
     await expect(resetPassword(db, token!, 'terceira-senha-longa', T0 + 10)).rejects.toThrow(/TOKEN_INVALID/);
+    close();
+  });
+
+  it('dois resets concorrentes: só um passa', async () => {
+    await createUser(db, { email: 'a@t.local', name: 'A', password: PW });
+    const token = await requestPasswordReset(db, 'a@t.local', T0);
+    const r = await Promise.allSettled([
+      resetPassword(db, token!, 'outra-senha-longa', T0 + 1),
+      resetPassword(db, token!, 'outra-senha-longa', T0 + 1),
+    ]);
+    expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+    const lost = r.find((x) => x.status === 'rejected') as PromiseRejectedResult;
+    expect(String(lost.reason)).toMatch(/TOKEN_INVALID/);
     close();
   });
 

@@ -45,4 +45,12 @@ describe('appUrl', () => {
     vi.stubEnv('APP_URL', 'https://m.example.com/');
     expect(appUrl('/convite/abc')).toBe('https://m.example.com/convite/abc');
   });
+
+  it('sem APP_URL: localhost em dev, erro em produção', () => {
+    vi.stubEnv('APP_URL', '');
+    vi.stubEnv('NODE_ENV', 'development');
+    expect(appUrl('/x')).toBe('http://localhost:3000/x');
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(() => appUrl('/x')).toThrow('APP_URL não configurada');
+  });
 });
