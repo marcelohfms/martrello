@@ -58,4 +58,32 @@ describe('card tools', () => {
     await expect(find('martrello_move_card').handler({ id: c.id, to_list: 'todo' }, { actor: SYSTEM_ACTOR }))
       .rejects.toMatchObject({ code: 'ASSIGNEE_REQUIRED' });
   });
+
+  it('assign_card atribui e get_card_history mostra o autor', async () => {
+    const p: any = await find('martrello_create_project').handler({ name: 'p' }, ctx);
+    const m = await makeUser(db, { name: 'Caio', email: 'caio@x.com' });
+    addMemberRow(db, p.id, m.user.id);
+    const c: any = await find('martrello_create_card').handler({ project: 'p', title: 'x' }, ctx);
+    const out: any = await find('martrello_assign_card').handler({ id: c.id, assignee: 'caio@x.com' }, ctx);
+    expect(out.assigneeId).toBe(m.user.id);
+    const hist: any[] = (await find('martrello_get_card_history').handler({ id: c.id }, ctx)) as any;
+    expect(hist.length).toBeGreaterThan(0);
+    expect(hist.some((e) => e.type === 'assignee')).toBe(true);
+    const un: any = await find('martrello_assign_card').handler({ id: c.id, assignee: null }, ctx);
+    expect(un.assigneeId).toBeNull();
+  });
+
+  it('create_card aceita assignee', async () => {
+    const p: any = await find('martrello_create_project').handler({ name: 'p' }, ctx);
+    const m = await makeUser(db, { name: 'Caio', email: 'caio@x.com' });
+    addMemberRow(db, p.id, m.user.id);
+    const c: any = await find('martrello_create_card').handler({ project: 'p', list: 'A fazer', title: 'x', assignee: 'caio@x.com' }, ctx);
+    expect(c.assigneeId).toBe(m.user.id);
+  });
+
+  it('descrições citam a regra do responsável', () => {
+    for (const n of ['martrello_create_card', 'martrello_assign_card']) {
+      expect(find(n).definition.description).toContain('Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.');
+    }
+  });
 });

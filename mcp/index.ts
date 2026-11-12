@@ -3,11 +3,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createServer } from './server';
 import { getDb } from '@/lib/db/client';
 import { firstAdminActor } from '@/lib/access/first-admin';
-import { SYSTEM_ACTOR } from '@/lib/access/actor';
 
 async function main() {
-  // Local stdio use acts as the oldest active admin (system when there is none yet).
-  const actor = (await firstAdminActor(getDb())) ?? SYSTEM_ACTOR;
+  // Local stdio use acts as the oldest active admin.
+  const actor = await firstAdminActor(getDb());
+  if (!actor) {
+    process.stderr.write('martrello mcp: nenhum admin no banco\n');
+    process.exit(1);
+  }
   const server = createServer(actor);
   const transport = new StdioServerTransport();
   await server.connect(transport);

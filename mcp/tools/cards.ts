@@ -1,13 +1,14 @@
 // mcp/tools/cards.ts
 import { getDb } from '@/lib/db/client';
-import { createCard, updateCard, moveCard, archiveCard, unarchiveCard, getCardById } from '@/lib/core/cards';
+import { createCard, assignCard, updateCard, moveCard, archiveCard, unarchiveCard, getCardById } from '@/lib/core/cards';
+import { listCardEvents } from '@/lib/core/events';
 import type { MartrelloTool } from './index';
 
 export const cardTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_create_card',
-      description: 'Cria um card. list default = Backlog. Fora do Backlog o card precisa de responsável: fica com quem chama. due_date aceita ISO ou pt-BR (hoje, amanhã, sex, +3d, etc).',
+      description: 'Cria um card. list default = Backlog. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama. due_date aceita ISO ou pt-BR (hoje, amanhã, sex, +3d, etc).',
       inputSchema: {
         type: 'object',
         required: ['project', 'title'],
@@ -18,6 +19,7 @@ export const cardTools: MartrelloTool[] = [
           description: { type: 'string', description: 'markdown' },
           due_date: { type: 'string' },
           labels: { type: 'array', items: { type: 'string' }, description: 'nomes de labels existentes' },
+          assignee: { type: 'string', description: 'e-mail ou nome de um membro do projeto' },
         },
       },
     },
@@ -28,6 +30,7 @@ export const cardTools: MartrelloTool[] = [
       description: input.description as string | undefined,
       dueDate: input.due_date as string | undefined,
       labels: input.labels as string[] | undefined,
+      assignee: input.assignee as string | undefined,
     }),
   },
   {
@@ -86,6 +89,34 @@ export const cardTools: MartrelloTool[] = [
       });
       return { ok: true };
     },
+  },
+  {
+    definition: {
+      name: 'martrello_assign_card',
+      description: 'Atribui o card a um membro do projeto (e-mail ou nome) ou remove o responsável com null. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.',
+      inputSchema: {
+        type: 'object',
+        required: ['id', 'assignee'],
+        properties: {
+          id: { type: 'string' },
+          assignee: { type: ['string', 'null'], description: 'e-mail ou nome; null remove' },
+        },
+      },
+    },
+    handler: async (input, { actor }) =>
+      assignCard(getDb(), actor, String(input.id), (input.assignee ?? null) as string | null),
+  },
+  {
+    definition: {
+      name: 'martrello_get_card_history',
+      description: 'Histórico do card: quem mudou o quê e quando (título, etapa, responsável, labels, etc).',
+      inputSchema: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+      },
+    },
+    handler: async (input, { actor }) => listCardEvents(getDb(), actor, String(input.id)),
   },
   {
     definition: {

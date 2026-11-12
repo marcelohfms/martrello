@@ -41,7 +41,7 @@ export const readTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_search_cards',
-      description: 'Busca cards por substring no título. Filtros opcionais por projeto e responsável.',
+      description: 'Busca cards por substring no título. Filtros opcionais por projeto e responsável. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.',
       inputSchema: {
         type: 'object',
         required: ['query'],
@@ -49,7 +49,7 @@ export const readTools: MartrelloTool[] = [
           query: { type: 'string' },
           project: { type: 'string' },
           include_archived: { type: 'boolean', default: false },
-          assignee: { type: 'string', description: "e-mail, nome, id ou 'me'" },
+          assignee: { type: 'string', description: "'me' ou e-mail/nome do responsável" },
         },
       },
     },
