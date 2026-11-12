@@ -26,4 +26,14 @@ describe('decideAccess', () => {
     expect(decideAccess('/project/123', false)).toBe('redirect-login');
     expect(decideAccess('/sprint', false)).toBe('redirect-login');
   });
+  it('lets invite, forgot and reset pages through with or without login', () => {
+    for (const path of ['/convite/abc', '/esqueci-senha', '/redefinir-senha/abc']) {
+      expect(decideAccess(path, false)).toBe('allow');
+      expect(decideAccess(path, true)).toBe('allow');
+    }
+  });
+  it('does not open lookalike paths', () => {
+    expect(decideAccess('/convitex/abc', false)).toBe('redirect-login');
+    expect(decideAccess('/esqueci-senhas', false)).toBe('redirect-login');
+  });
 });

@@ -9,7 +9,7 @@ export async function attemptLogin(
   db: Db,
   limiter: { check(key: string): RateLimitCheck; recordFailure(key: string): void; reset(key: string): void },
   ip: string,
-  username: string,
+  email: string,
   password: string,
 ): Promise<LoginResult> {
   const gate = limiter.check(ip);
@@ -21,9 +21,9 @@ export async function attemptLogin(
   // concurrent requests cannot all slip past check() before a failure is counted.
   limiter.recordFailure(ip);
 
-  const user = await authenticate(db, username, password);
+  const user = await authenticate(db, email, password);
   if (!user) {
-    return { ok: false, error: 'Usuário ou senha inválidos.' };
+    return { ok: false, error: 'E-mail ou senha inválidos.' };
   }
   limiter.reset(ip);
   return { ok: true, user };

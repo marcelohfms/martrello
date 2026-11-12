@@ -1,11 +1,10 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { Board, type Column } from '@/components/Board';
 import { CardPanel } from '@/components/CardPanel';
-import { closeSprintAction } from '@/app/actions';
 import { useRealtimeRefresh } from '@/components/useRealtimeRefresh';
 
-type Props = { columns: Column[]; sprintName: string | null; startedDays: number };
+type Props = { columns: Column[]; sprintName: string | null; weekDay: number };
 
 function SprintProgress({ done, doing, total }: { done: number; doing: number; total: number }) {
   return (
@@ -25,10 +24,8 @@ function SprintProgress({ done, doing, total }: { done: number; doing: number; t
   );
 }
 
-export function SprintClient({ columns, sprintName, startedDays }: Props) {
+export function SprintClient({ columns, sprintName, weekDay }: Props) {
   const [openCardId, setOpenCardId] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  const [confirming, setConfirming] = useState(false);
   useRealtimeRefresh();
 
   const totalCards = columns.reduce((sum, c) => sum + c.cards.length, 0);
@@ -44,42 +41,15 @@ export function SprintClient({ columns, sprintName, startedDays }: Props) {
         </h1>
 
         <span className="shrink-0 text-[13px] font-medium text-mt-rail-text">
-          <span aria-hidden="true" className="text-mt-rail-muted">//</span> Dia {startedDays}
+          <span aria-hidden="true" className="text-mt-rail-muted">//</span> Dia {weekDay}
         </span>
 
         {totalCards > 0 && <SprintProgress done={doneCards} doing={doingCards} total={totalCards} />}
-
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {confirming ? (
-            <>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    await closeSprintAction(true);
-                    setConfirming(false);
-                  })
-                }
-                className="btn btn-inverse"
-              >
-                {pending ? 'Fechando…' : 'Fechar e carregar'}
-              </button>
-              <button type="button" onClick={() => setConfirming(false)} className="btn text-mt-rail-text hover:bg-mt-rail-hover">
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button type="button" onClick={() => setConfirming(true)} className="btn btn-rail">
-              Fechar sprint
-            </button>
-          )}
-        </div>
       </header>
 
       {totalCards === 0 && (
         <p className="shrink-0 border-b border-mt-line bg-mt-card px-4 py-2 text-[13px] text-mt-muted md:px-6">
-          Esta sprint ainda não tem cards. Abra um card em um projeto e use Adicionar ao Sprint, ou peça ao Claude.
+          Nenhuma tarefa sua em A fazer, Fazendo ou Feito nesta semana.
         </p>
       )}
 
@@ -88,7 +58,7 @@ export function SprintClient({ columns, sprintName, startedDays }: Props) {
       </div>
 
       {openCardId && (
-        <CardPanel cardId={openCardId} onClose={() => setOpenCardId(null)} />
+        <CardPanel key={openCardId} cardId={openCardId} onClose={() => setOpenCardId(null)} />
       )}
     </>
   );

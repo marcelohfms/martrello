@@ -12,12 +12,12 @@ import { clientIp } from '@/lib/auth/client-ip';
 export type LoginState = { error: string | null };
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const username = String(formData.get('username') ?? '');
+  const email = String(formData.get('email') ?? '');
   const password = String(formData.get('password') ?? '');
   const ip = clientIp(await headers());
 
   const db = getDb();
-  const result = await attemptLogin(db, loginLimiter, ip, username, password);
+  const result = await attemptLogin(db, loginLimiter, ip, email, password);
   if (!result.ok) return { error: result.error };
 
   const { token, expiresAt } = await createSession(db, result.user.id);

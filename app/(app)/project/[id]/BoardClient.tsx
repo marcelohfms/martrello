@@ -13,7 +13,7 @@ export function BoardClient({ columns }: { columns: Column[] }) {
         <Board columns={columns} variant="project" onCardClick={(id) => setOpenCardId(id)} />
       </div>
       {openCardId && (
-        <CardPanel cardId={openCardId} onClose={() => setOpenCardId(null)} />
+        <CardPanel key={openCardId} cardId={openCardId} onClose={() => setOpenCardId(null)} />
       )}
     </>
   );

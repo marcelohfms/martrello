@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { sessions, users } from '@/lib/db/schema';
+import { sessions, users, type Role } from '@/lib/db/schema';
 import type { Db } from '@/lib/core/test-helpers';
 
-export type SessionUser = { id: string; username: string };
+export type SessionUser = { id: string; email: string; name: string; role: Role };
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -30,17 +30,17 @@ export async function validateSession(
   if (!token) return null;
   const idHash = hashToken(token);
   const row = await db
-    .select({ expiresAt: sessions.expiresAt, id: users.id, username: users.username })
+    .select({ expiresAt: sessions.expiresAt, id: users.id, email: users.email, name: users.name, role: users.role, disabledAt: users.disabledAt })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(eq(sessions.idHash, idHash))
     .get();
-  if (!row) return null;
+  if (!row || row.disabledAt !== null) return null;
   if (row.expiresAt <= now) {
     await db.delete(sessions).where(eq(sessions.idHash, idHash));
     return null;
   }
-  return { id: row.id, username: row.username };
+  return { id: row.id, email: row.email, name: row.name, role: row.role };
 }
 
 export async function deleteSession(db: Db, token: string | null | undefined): Promise<void> {

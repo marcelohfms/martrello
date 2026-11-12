@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { loginAction, type LoginState } from './actions';
 
@@ -20,8 +21,8 @@ export function LoginForm() {
       </div>
 
       <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
-        Usuário
-        <input name="username" autoComplete="username" required autoFocus className="field !text-[14px] font-normal" />
+        E-mail
+        <input name="email" type="email" autoComplete="username" required autoFocus className="field !text-[14px] font-normal" />
       </label>
 
       <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-mt-heading">
@@ -36,6 +37,10 @@ export function LoginForm() {
       <button type="submit" disabled={pending} className="btn btn-primary !py-2.5 !text-[14px]">
         {pending ? 'Entrando…' : 'Entrar'}
       </button>
+
+      <Link href="/esqueci-senha" className="text-center text-[13px] text-mt-heading underline">
+        Esqueci minha senha
+      </Link>
     </form>
   );
 }

@@ -1,12 +1,14 @@
-import { and, asc, count, eq, isNull, max, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
-import { projects, lists, cards, type Project, type List } from '@/lib/db/schema';
+import { projects, lists, cards, projectMembers, type Project, type List } from '@/lib/db/schema';
 import { MartrelloError, suggestClosest } from '@/lib/errors';
 import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
 import { suggestAcronym } from './acronym';
+import { STAGES } from './stages';
+import type { Actor } from '@/lib/access/actor';
+import { assertAdmin, visibleProjectIds } from '@/lib/access/guard';
 
-export const DEFAULT_LISTS = ['A fazer', 'Fazendo', 'Feito'] as const;
 
 export const PROJECT_COLOR_PALETTE = [
   '#8a9a5b', '#6b8e4e', '#a3b18a', '#588157',
@@ -15,8 +17,10 @@ export const PROJECT_COLOR_PALETTE = [
 
 export async function createProject(
   db: Db,
-  input: { name: string; color?: string; acronym?: string; lists?: string[] },
+  actor: Actor,
+  input: { name: string; color?: string; acronym?: string },
 ): Promise<Project> {
+  assertAdmin(actor);
   const existing = await db.select().from(projects).where(eq(projects.name, input.name));
   if (existing.length > 0) {
     throw new MartrelloError('NAME_CONFLICT', `Já existe projeto chamado '${input.name}'`);
@@ -34,7 +38,6 @@ export async function createProject(
   const color = input.color ?? PROJECT_COLOR_PALETTE[Number(totalCount) % PROJECT_COLOR_PALETTE.length];
   const id = ulid();
   const now = Date.now();
-  const listNames = input.lists?.length ? input.lists : [...DEFAULT_LISTS];
 
   db.transaction((tx) => {
     tx.insert(projects).values({
@@ -45,14 +48,19 @@ export async function createProject(
       position: maxPos + POSITION_STEP,
       createdAt: now,
     }).run();
-    for (let i = 0; i < listNames.length; i++) {
+    for (let i = 0; i < STAGES.length; i++) {
       tx.insert(lists).values({
         id: ulid(),
         projectId: id,
-        name: listNames[i],
-        position: POSITION_STEP * (i + 1),
+        name: STAGES[i].name,
+        stage: STAGES[i].stage,
+        position: POSITION_STEP * i,
         createdAt: now,
       }).run();
+    }
+    // The creating admin is always a member; a system actor has no user to add.
+    if (actor.kind === 'user') {
+      tx.insert(projectMembers).values({ projectId: id, userId: actor.id, addedAt: now }).run();
     }
   });
 
@@ -62,12 +70,15 @@ export async function createProject(
 
 export async function listProjects(
   db: Db,
+  actor: Actor,
   opts: { includeArchived?: boolean } = {},
 ): Promise<Array<Project & { listCount: number; cardCount: number }>> {
+  const visible = await visibleProjectIds(db, actor);
   const baseQuery = db.select().from(projects).orderBy(asc(projects.position));
-  const projectRows = opts.includeArchived
-    ? await baseQuery
-    : await baseQuery.where(isNull(projects.archivedAt));
+  const conditions = [];
+  if (!opts.includeArchived) conditions.push(isNull(projects.archivedAt));
+  if (visible !== null) conditions.push(inArray(projects.id, visible));
+  const projectRows = conditions.length > 0 ? await baseQuery.where(and(...conditions)) : await baseQuery;
 
   const listCountRows = await db
     .select({ projectId: lists.projectId, c: count() })
@@ -89,16 +100,23 @@ export async function listProjects(
   }));
 }
 
+/**
+ * Internal lookup by id or name. `visibleIds` (null = everything) scopes both the match and the
+ * name suggestions, so an invisible project is indistinguishable from a nonexistent one.
+ * Callers acting for a user go through `getProject`.
+ */
 export async function getProjectByNameOrId(
   db: Db,
   nameOrId: string,
+  visibleIds: string[] | null = null,
 ): Promise<Project & { lists: List[] }> {
+  const scope = visibleIds === null ? undefined : inArray(projects.id, visibleIds);
   const found =
-    (await db.select().from(projects).where(eq(projects.id, nameOrId)))[0] ??
-    (await db.select().from(projects).where(eq(projects.name, nameOrId)))[0];
+    (await db.select().from(projects).where(and(eq(projects.id, nameOrId), scope)))[0] ??
+    (await db.select().from(projects).where(and(eq(projects.name, nameOrId), scope)))[0];
 
   if (!found) {
-    const all = await db.select({ name: projects.name }).from(projects);
+    const all = await db.select({ name: projects.name }).from(projects).where(scope);
     throw new MartrelloError(
       'PROJECT_NOT_FOUND',
       `Projeto '${nameOrId}' não existe`,
@@ -115,11 +133,22 @@ export async function getProjectByNameOrId(
   return { ...found, lists: listRows };
 }
 
+/** Public lookup: only projects the actor can see. */
+export async function getProject(
+  db: Db,
+  actor: Actor,
+  nameOrId: string,
+): Promise<Project & { lists: List[] }> {
+  return getProjectByNameOrId(db, nameOrId, await visibleProjectIds(db, actor));
+}
+
 export async function updateProject(
   db: Db,
+  actor: Actor,
   id: string,
   patch: { name?: string; color?: string; acronym?: string },
 ): Promise<Project> {
+  assertAdmin(actor);
   if (patch.name) {
     const conflict = await db
       .select()
@@ -155,13 +184,15 @@ export async function updateProject(
   return row;
 }
 
-export async function archiveProject(db: Db, id: string): Promise<void> {
+export async function archiveProject(db: Db, actor: Actor, id: string): Promise<void> {
+  assertAdmin(actor);
   const found = (await db.select().from(projects).where(eq(projects.id, id)))[0];
   if (!found) throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto ${id} não existe`);
   await db.update(projects).set({ archivedAt: Date.now() }).where(eq(projects.id, id));
 }
 
-export async function reorderProjects(db: Db, orderedIds: string[]): Promise<void> {
+export async function reorderProjects(db: Db, actor: Actor, orderedIds: string[]): Promise<void> {
+  assertAdmin(actor);
   db.transaction((tx) => {
     const renumbered = renumber(orderedIds);
     for (const r of renumbered) {

@@ -3,6 +3,7 @@ import { getDb, closeDb } from '@/lib/db/client';
 import { createProject } from '@/lib/core/projects';
 import { createLabel } from '@/lib/core/labels';
 import { MartrelloError } from '@/lib/errors';
+import { SYSTEM_ACTOR } from '@/lib/access/actor';
 
 const DEFAULT_LABELS = [
   { name: 'urgente', color: '#ef4444' },
@@ -14,7 +15,7 @@ const DEFAULT_LABELS = [
 
 async function safeCreateProject(db: ReturnType<typeof getDb>, name: string) {
   try {
-    await createProject(db, { name });
+    await createProject(db, SYSTEM_ACTOR, { name });
     console.log(`+ projeto: ${name}`);
   } catch (e) {
     if (e instanceof MartrelloError && e.code === 'NAME_CONFLICT') {
@@ -25,7 +26,7 @@ async function safeCreateProject(db: ReturnType<typeof getDb>, name: string) {
 
 async function safeCreateLabel(db: ReturnType<typeof getDb>, name: string, color: string) {
   try {
-    await createLabel(db, name, color);
+    await createLabel(db, SYSTEM_ACTOR, name, color);
     console.log(`+ label: ${name}`);
   } catch (e) {
     if (e instanceof MartrelloError && e.code === 'NAME_CONFLICT') {

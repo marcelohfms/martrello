@@ -18,7 +18,7 @@ export const dependencyTools: MartrelloTool[] = [
         },
       },
     },
-    handler: async (input) => addDependency(getDb(), String(input.card_id), String(input.blocker_card_id)),
+    handler: async (input, { actor }) => addDependency(getDb(), actor, String(input.card_id), String(input.blocker_card_id)),
   },
   {
     definition: {
@@ -33,8 +33,8 @@ export const dependencyTools: MartrelloTool[] = [
         },
       },
     },
-    handler: async (input) => {
-      await removeDependency(getDb(), String(input.card_id), String(input.blocker_card_id));
+    handler: async (input, { actor }) => {
+      await removeDependency(getDb(), actor, String(input.card_id), String(input.blocker_card_id));
       return { ok: true };
     },
   },

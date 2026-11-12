@@ -49,3 +49,5 @@ export function createRateLimiter(opts: {
 const FIFTEEN_MIN = 15 * 60 * 1000;
 
 export const loginLimiter = createRateLimiter({ maxFailures: 5, windowMs: FIFTEEN_MIN, blockMs: FIFTEEN_MIN });
+
+export const resetLimiter = createRateLimiter({ maxFailures: 5, windowMs: FIFTEEN_MIN, blockMs: FIFTEEN_MIN });

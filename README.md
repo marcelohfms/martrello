@@ -73,13 +73,13 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Drizzle 
 ```bash
 pnpm install
 pnpm db:migrate    # create the SQLite schema in ./martrello.db
-pnpm user:set <username>   # create the login (prompts for a password, min. 12 chars)
+pnpm user:set <email>   # create the first admin (prompts for a password, min. 12 chars)
 pnpm seed          # create the Inbox project + default labels (idempotent)
 pnpm mcp:build     # bundle the MCP server to mcp/dist/index.js
 pnpm dev           # web UI at http://localhost:3000
 ```
 
-The app requires login: sign in at http://localhost:3000/login with the user created by `pnpm user:set`.
+The app requires login: sign in at http://localhost:3000/login with the e-mail created by `pnpm user:set`. Further members join by invite from `/admin` (see [docs/deploy.md](docs/deploy.md) for `APP_URL`, `RESEND_API_KEY` and `EMAIL_FROM`).
 
 ## MCP server setup (one-time)
 
@@ -132,7 +132,7 @@ Restart Claude Code. The `martrello_*` tools become available in every session.
 
 **Labels** — `martrello_create_label`, `martrello_add_label`, `martrello_remove_label`, `martrello_delete_label`
 
-**Sprint** — `martrello_start_sprint`, `martrello_add_to_sprint`, `martrello_move_in_sprint`, `martrello_remove_from_sprint`, `martrello_close_sprint`
+**Sprint** — each person has a weekly sprint (Monday–Sunday, São Paulo time) that opens and closes by itself and shows their cards in A fazer, Fazendo and Feito (done this week). Read it with `martrello_get_sprint`, `martrello_list_sprints`, `martrello_get_sprint_history`; change a card's stage with `martrello_move_card`.
 
 ---
 
@@ -178,7 +178,7 @@ The domain logic in `lib/core` is covered by unit tests (in-memory SQLite). The 
 ## Known limitations
 
 - **Local-only.** The realtime SSE endpoint relies on a long-lived connection + `fs.watch`, which don't work on serverless platforms (e.g., Vercel functions are ephemeral with a read-only filesystem). Running on a cloud platform would require a different change-detection mechanism (Postgres `LISTEN/NOTIFY`, a Redis pub/sub, or client polling) and a networked database instead of a local SQLite file. The UI degrades gracefully — if the SSE stream never connects, a 20s polling fallback keeps it current.
-- **Single user, no auth.** Designed for one person on `localhost`.
+- **Small team, one admin.** Access is by invite only; there are no roles beyond admin and member.
 
 ---
 
@@ -193,5 +193,5 @@ Design specs and implementation plans live in `docs/superpowers/`:
 ## Deploy
 
 Production runs on Easypanel from the `ghcr.io/marcelohfms/martrello` image,
-behind a single-user login, with the MCP server exposed at `/api/mcp`
-(bearer token). See [docs/deploy.md](docs/deploy.md).
+behind an e-mail login with invite-only access, with the MCP server exposed at
+`/api/mcp` (personal bearer token per user). See [docs/deploy.md](docs/deploy.md).

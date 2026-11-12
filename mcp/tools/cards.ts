@@ -1,13 +1,14 @@
 // mcp/tools/cards.ts
 import { getDb } from '@/lib/db/client';
-import { createCard, updateCard, moveCard, archiveCard, unarchiveCard, getCardById } from '@/lib/core/cards';
+import { createCard, assignCard, updateCard, moveCard, archiveCard, unarchiveCard, getCardById } from '@/lib/core/cards';
+import { listCardEvents } from '@/lib/core/events';
 import type { MartrelloTool } from './index';
 
 export const cardTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_create_card',
-      description: 'Cria um card. list default = primeira do projeto. due_date aceita ISO ou pt-BR (hoje, amanhã, sex, +3d, etc).',
+      description: 'Cria um card. list default = Backlog. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama. due_date aceita ISO ou pt-BR (hoje, amanhã, sex, +3d, etc).',
       inputSchema: {
         type: 'object',
         required: ['project', 'title'],
@@ -18,31 +19,31 @@ export const cardTools: MartrelloTool[] = [
           description: { type: 'string', description: 'markdown' },
           due_date: { type: 'string' },
           labels: { type: 'array', items: { type: 'string' }, description: 'nomes de labels existentes' },
-          add_to_sprint: { type: 'boolean', default: false },
+          assignee: { type: 'string', description: 'e-mail ou nome de um membro do projeto' },
         },
       },
     },
-    handler: async (input) => createCard(getDb(), {
+    handler: async (input, { actor }) => createCard(getDb(), actor, {
       project: String(input.project),
       list: input.list as string | undefined,
       title: String(input.title),
       description: input.description as string | undefined,
       dueDate: input.due_date as string | undefined,
       labels: input.labels as string[] | undefined,
-      addToSprint: Boolean(input.add_to_sprint),
+      assignee: input.assignee as string | undefined,
     }),
   },
   {
     definition: {
       name: 'martrello_get_card',
-      description: 'Retorna um card com suas labels.',
+      description: 'Retorna um card com suas labels, responsável e dependências.',
       inputSchema: {
         type: 'object',
         required: ['id'],
         properties: { id: { type: 'string' } },
       },
     },
-    handler: async (input) => getCardById(getDb(), String(input.id)),
+    handler: async (input, { actor }) => getCardById(getDb(), actor, String(input.id)),
   },
   {
     definition: {
@@ -59,7 +60,7 @@ export const cardTools: MartrelloTool[] = [
         },
       },
     },
-    handler: async (input) => updateCard(getDb(), String(input.id), {
+    handler: async (input, { actor }) => updateCard(getDb(), actor, String(input.id), {
       title: input.title as string | undefined,
       description: input.description as string | null | undefined,
       dueDate: input.due_date as string | null | undefined,
@@ -68,7 +69,7 @@ export const cardTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_move_card',
-      description: 'Move card pra outra list (e opcionalmente outro projeto).',
+      description: 'Move card pra outra list (e opcionalmente outro projeto). Sair do Backlog sem responsável atribui o card a quem chama. Mudar de projeto exige que o responsável seja membro do destino. Ir para Feito ignora position.',
       inputSchema: {
         type: 'object',
         required: ['id', 'to_list'],
@@ -80,14 +81,42 @@ export const cardTools: MartrelloTool[] = [
         },
       },
     },
-    handler: async (input) => {
-      await moveCard(getDb(), String(input.id), {
+    handler: async (input, { actor }) => {
+      await moveCard(getDb(), actor, String(input.id), {
         toProject: input.to_project as string | undefined,
         toList: String(input.to_list),
         position: input.position as number | undefined,
       });
       return { ok: true };
     },
+  },
+  {
+    definition: {
+      name: 'martrello_assign_card',
+      description: 'Atribui o card a um membro ativo do projeto (e-mail ou nome) ou remove o responsável com null. `null` só é aceito no Backlog.',
+      inputSchema: {
+        type: 'object',
+        required: ['id', 'assignee'],
+        properties: {
+          id: { type: 'string' },
+          assignee: { type: ['string', 'null'], description: 'e-mail ou nome; null remove' },
+        },
+      },
+    },
+    handler: async (input, { actor }) =>
+      assignCard(getDb(), actor, String(input.id), (input.assignee ?? null) as string | null),
+  },
+  {
+    definition: {
+      name: 'martrello_get_card_history',
+      description: 'Histórico do card: quem mudou o quê e quando (título, etapa, responsável, labels, etc).',
+      inputSchema: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string' } },
+      },
+    },
+    handler: async (input, { actor }) => listCardEvents(getDb(), actor, String(input.id)),
   },
   {
     definition: {
@@ -99,8 +128,8 @@ export const cardTools: MartrelloTool[] = [
         properties: { id: { type: 'string' } },
       },
     },
-    handler: async (input) => {
-      await archiveCard(getDb(), String(input.id));
+    handler: async (input, { actor }) => {
+      await archiveCard(getDb(), actor, String(input.id));
       return { ok: true };
     },
   },
@@ -114,8 +143,8 @@ export const cardTools: MartrelloTool[] = [
         properties: { id: { type: 'string' } },
       },
     },
-    handler: async (input) => {
-      await unarchiveCard(getDb(), String(input.id));
+    handler: async (input, { actor }) => {
+      await unarchiveCard(getDb(), actor, String(input.id));
       return { ok: true };
     },
   },

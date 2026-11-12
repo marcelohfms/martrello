@@ -5,14 +5,19 @@ export type ErrorCode =
   | 'LABEL_NOT_FOUND'
   | 'SPRINT_NOT_FOUND'
   | 'INVALID_DATE'
-  | 'SPRINT_ALREADY_ACTIVE'
-  | 'NO_ACTIVE_SPRINT'
   | 'LIST_NOT_IN_PROJECT'
   | 'LIST_NOT_EMPTY'
   | 'NAME_CONFLICT'
   | 'INVALID_INPUT'
   | 'CROSS_PROJECT_DEPENDENCY'
-  | 'CYCLE_DETECTED';
+  | 'CYCLE_DETECTED'
+  | 'EMAIL_TAKEN'
+  | 'USER_NOT_FOUND'
+  | 'FORBIDDEN'
+  | 'TOKEN_INVALID'
+  | 'ASSIGNEE_REQUIRED'
+  | 'ASSIGNEE_NOT_MEMBER'
+  | 'LISTS_ARE_FIXED';
 
 export class MartrelloError extends Error {
   public readonly originalMessage: string;

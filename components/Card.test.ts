@@ -1,14 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Card, type CardData } from './Card';
 import { ProjectTag } from './ProjectTag';
 import { ProjectPrivacyProvider } from './ProjectPrivacyContext';
-
-vi.mock('@/app/actions', () => ({
-  addToSprintAction: vi.fn(),
-  removeFromSprintAction: vi.fn(),
-}));
 
 const card: CardData = {
   id: 'c1',
@@ -19,6 +14,8 @@ const card: CardData = {
   projectAcronym: 'AXV',
   projectColor: '#6b8e4e',
   isBlocked: false,
+  assignee: null,
+  completedAt: null,
 };
 
 function render(variant: 'project' | 'sprint', data: CardData = card, lifted = false) {
@@ -53,32 +50,37 @@ describe('Card project tag', () => {
   });
 });
 
-describe('Card sprint button', () => {
-  it('offers sending to the sprint when the card is out of it', () => {
-    expect(render('project', { ...card, inSprint: false })).toContain('aria-label="Enviar para a Sprint"');
+describe('Card assignee and completion', () => {
+  it('mostra as iniciais do responsável', () => {
+    const html = render('project', { ...card, assignee: { name: 'Marcelo Ferro' } });
+    expect(html).toContain('>MF</span>');
+    expect(html).toContain('title="Marcelo Ferro"');
+    expect(html).toContain('Responsável: Marcelo Ferro');
   });
 
-  it('offers moving to the backlog when the card is in the sprint', () => {
-    const html = render('project', { ...card, inSprint: true });
-    expect(html).toContain('aria-label="Mover para o Backlog (tirar da Sprint)"');
-    expect(html).not.toContain('Enviar para a Sprint');
+  it('não mostra nada para tarefa sem responsável', () => {
+    const html = render('project');
+    expect(html).not.toContain('Responsável');
+    expect(html).not.toContain('rounded-full bg-ax');
   });
 
-  it('is hidden when there is no active sprint', () => {
-    const html = render('project', { ...card, inSprint: undefined });
-    expect(html).not.toContain('Enviar para a Sprint');
-    expect(html).not.toContain('Mover para o Backlog');
+  it('mostra Concluída em 12/11 para card em Feito', () => {
+    const html = render('project', { ...card, completedAt: new Date(2026, 10, 12, 15, 0).getTime() });
+    expect(html).toContain('Concluída em 12/11');
   });
 
-  it('is hidden on the copy that follows the pointer during a drag', () => {
-    expect(render('sprint', { ...card, inSprint: true }, true)).not.toContain('Mover para o Backlog');
+  it('não mostra conclusão para card fora de Feito', () => {
+    expect(render('project')).not.toContain('Concluída');
   });
+});
 
-  it('never nests a button inside the card button', () => {
-    const html = render('project', { ...card, inSprint: false });
-    const first = html.indexOf('<button');
-    const firstClose = html.indexOf('</button>');
-    expect(html.indexOf('<button', first + 1)).toBeGreaterThan(firstClose);
+describe('Card actions', () => {
+  it('has a single button and no sprint toggle', () => {
+    for (const variant of ['project', 'sprint'] as const) {
+      const html = render(variant);
+      expect(html.match(/<button/g)).toHaveLength(1);
+      expect(html).not.toContain('Sprint');
+    }
   });
 });
 
