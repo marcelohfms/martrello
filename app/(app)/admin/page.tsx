@@ -15,13 +15,14 @@ export default async function AdminPage() {
     listPendingInvites(db, actor),
     listProjects(db, actor),
   ]);
+  const adminIds = new Set(users.filter((u) => u.role === 'admin').map((u) => u.id));
   const projectRows = await Promise.all(
     projects.map(async (p) => ({
       id: p.id,
       name: p.name,
       acronym: p.acronym,
       color: p.color,
-      members: await listMembers(db, actor, p.id),
+      members: (await listMembers(db, actor, p.id)).map((m) => ({ ...m, isAdmin: adminIds.has(m.id) })),
     })),
   );
 

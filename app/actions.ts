@@ -5,7 +5,7 @@ import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
 import { createCard, updateCard, moveCard, archiveCard, getCardById, assignCard } from '@/lib/core/cards';
 import { listCardEvents } from '@/lib/core/events';
-import { toResult } from '@/lib/action-result';
+import { toResult, type ActionResult } from '@/lib/action-result';
 import { addLabelToCard, removeLabelFromCard } from '@/lib/core/labels';
 import { addDependency, removeDependency } from '@/lib/core/dependencies';
 
@@ -60,8 +60,6 @@ export async function removeDependencyAction(cardId: string, blockerCardId: stri
   revalidatePath(`/project/${card.projectId}`);
   revalidatePath('/sprint');
 }
-
-export type ActionResult = { ok: true } | { error: string };
 
 export async function assignCardAction(cardId: string, assignee: string | null): Promise<ActionResult> {
   const { actor } = await requireActor();

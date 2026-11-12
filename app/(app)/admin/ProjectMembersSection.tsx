@@ -2,9 +2,10 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProjectLabel } from '@/components/ProjectLabel';
-import { addMemberAction, removeMemberAction, type AdminResult } from './actions';
+import type { ActionResult as AdminResult } from '@/lib/action-result';
+import { addMemberAction, removeMemberAction } from './actions';
 
-type Member = { id: string; name: string; email: string; disabled: boolean };
+type Member = { id: string; name: string; email: string; disabled: boolean; isAdmin: boolean };
 type ProjectRow = { id: string; name: string; acronym: string; color: string; members: Member[] };
 
 export function ProjectMembersSection({ projects, people }: { projects: ProjectRow[]; people: { id: string; name: string }[] }) {
@@ -43,7 +44,7 @@ export function ProjectMembersSection({ projects, people }: { projects: ProjectR
                     {m.name}
                     {m.disabled && <span className="ml-2 text-[12px]">desativada</span>}
                   </span>
-                  <button
+                  {!m.isAdmin && <button
                     type="button"
                     disabled={pending}
                     className="btn btn-ghost shrink-0"
@@ -51,7 +52,7 @@ export function ProjectMembersSection({ projects, people }: { projects: ProjectR
                     onClick={() => start(async () => handle(await removeMemberAction(p.id, m.id)))}
                   >
                     Remover
-                  </button>
+                  </button>}
                 </li>
               ))}
             </ul>

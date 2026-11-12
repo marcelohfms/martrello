@@ -9,10 +9,9 @@ import { addMember, removeMember } from '@/lib/core/members';
 import { appUrl } from '@/lib/email/mailer';
 import { deliverInvite, type InviteResult } from '@/lib/auth/invite-delivery';
 import { validateInviteInput } from '@/lib/auth/admin-input';
-import { toResult } from '@/lib/action-result';
+import { toResult, type ActionResult } from '@/lib/action-result';
 
-export type AdminResult = { ok: true } | { error: string };
-export type { InviteResult };
+type AdminResult = ActionResult;
 
 export async function inviteAction(input: { email: string; name: string }): Promise<InviteResult> {
   const { actor } = await requireAdmin();

@@ -8,9 +8,9 @@ import {
   cancelInviteAction,
   deactivateUserAction,
   reactivateUserAction,
-  type InviteResult,
-  type AdminResult,
 } from './actions';
+import type { InviteResult } from '@/lib/auth/invite-delivery';
+import type { ActionResult as AdminResult } from '@/lib/action-result';
 
 type Person = { id: string; name: string; email: string; role: 'admin' | 'member'; disabled: boolean; projectCount: number };
 type Invite = { inviteId: string; email: string; name: string; expiresAt: number };
