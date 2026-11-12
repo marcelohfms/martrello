@@ -6,8 +6,7 @@ import { requireAdmin } from '@/lib/auth/current-user';
 import { createInvite, resendInvite, cancelInvite, listPendingInvites } from '@/lib/auth/tokens';
 import { deactivateUser, reactivateUser } from '@/lib/auth/admin-users';
 import { addMember, removeMember } from '@/lib/core/members';
-import { appUrl } from '@/lib/email/mailer';
-import { deliverInvite, type InviteResult } from '@/lib/auth/invite-delivery';
+import { deliverInvite, inviteLink, inviteLinkPreflight, type InviteResult } from '@/lib/auth/invite-delivery';
 import { validateInviteInput } from '@/lib/auth/admin-input';
 import { toResult, type ActionResult } from '@/lib/action-result';
 
@@ -17,6 +16,8 @@ export async function inviteAction(input: { email: string; name: string }): Prom
   const { actor } = await requireAdmin();
   const v = validateInviteInput(input);
   if ('error' in v) return v;
+  const preflight = inviteLinkPreflight();
+  if (preflight) return preflight;
   try {
     const { token } = await createInvite(getDb(), actor, { email: v.email, name: v.name });
     const res = await deliverInvite(v.email, v.name, token);
@@ -29,13 +30,15 @@ export async function inviteAction(input: { email: string; name: string }): Prom
 
 export async function resendInviteAction(inviteId: string): Promise<InviteResult> {
   const { actor } = await requireAdmin();
+  const preflight = inviteLinkPreflight();
+  if (preflight) return preflight;
   try {
     const db = getDb();
     const pending = (await listPendingInvites(db, actor)).find(
       (i) => i.inviteId === inviteId,
     );
     const { token } = await resendInvite(db, actor, inviteId);
-    const res = pending ? await deliverInvite(pending.email, pending.name, token) : { ok: true as const, link: appUrl('/convite/' + token) };
+    const res = pending ? await deliverInvite(pending.email, pending.name, token) : { ok: true as const, link: inviteLink(token)! };
     revalidatePath('/admin');
     return res;
   } catch (e) {
