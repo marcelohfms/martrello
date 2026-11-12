@@ -4,6 +4,7 @@ import * as clientModule from '@/lib/db/client';
 import { listCardEvents } from '@/lib/core/events';
 import { SYSTEM_ACTOR } from '@/lib/access/actor';
 import { cardTools } from './cards';
+import { readTools } from './read';
 import { projectTools } from './projects';
 import type { ToolCtx } from './index';
 
@@ -81,9 +82,13 @@ describe('card tools', () => {
     expect(c.assigneeId).toBe(m.user.id);
   });
 
-  it('descrições citam a regra do responsável', () => {
-    for (const n of ['martrello_create_card', 'martrello_assign_card']) {
-      expect(find(n).definition.description).toContain('Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.');
+  it('descrições citam a regra do responsável que vale para cada ferramenta', () => {
+    const desc = (n: string) => [...readTools, ...cardTools].find((t) => t.definition.name === n)!.definition.description;
+    expect(desc('martrello_create_card')).toContain('Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.');
+    expect(desc('martrello_search_cards')).toContain("Use `assignee: 'me'` para ver só as suas.");
+    expect(desc('martrello_assign_card')).toContain('`null` só é aceito no Backlog.');
+    for (const n of ['martrello_search_cards', 'martrello_assign_card']) {
+      expect(desc(n)).not.toContain('fica com quem chama');
     }
   });
 });

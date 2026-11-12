@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
 import { SYSTEM_ACTOR } from '@/lib/access/actor';
 import { createProject } from './projects';
-import { createList, renameList, deleteList, reorderLists, getListByNameOrId } from './lists';
+import { createList, renameList, deleteList, reorderLists } from './lists';
 import { getStageList, resolveListRef } from './stages';
 
 let db: Db;
@@ -11,16 +11,9 @@ let close: () => void;
 beforeEach(() => { const t = makeTestDb(); db = t.db; close = t.close; });
 
 describe('lists', () => {
-  it('finds a list by name or id', async () => {
-    const p = await createProject(db, SYSTEM_ACTOR, { name: 'p' });
-    const l = await getListByNameOrId(db, p.id, 'Fazendo');
-    expect((await getListByNameOrId(db, p.id, l.id)).id).toBe(l.id);
-    close();
-  });
-
   it('lists are fixed: create/rename/delete/reorder throw LISTS_ARE_FIXED', async () => {
     const p = await createProject(db, SYSTEM_ACTOR, { name: 'p' });
-    const l = await getListByNameOrId(db, p.id, 'A fazer');
+    const l = await getStageList(db, p.id, 'todo');
     await expect(createList(db, p.id, 'Em revisão')).rejects.toThrow(/LISTS_ARE_FIXED/);
     await expect(renameList(db, l.id, 'X')).rejects.toThrow(/LISTS_ARE_FIXED/);
     await expect(deleteList(db, l.id)).rejects.toThrow(/LISTS_ARE_FIXED/);

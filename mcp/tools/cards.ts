@@ -69,7 +69,7 @@ export const cardTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_move_card',
-      description: 'Move card pra outra list (e opcionalmente outro projeto). Sair do Backlog sem responsável atribui o card a quem chama. Ir para Feito ignora position.',
+      description: 'Move card pra outra list (e opcionalmente outro projeto). Sair do Backlog sem responsável atribui o card a quem chama. Mudar de projeto exige que o responsável seja membro do destino. Ir para Feito ignora position.',
       inputSchema: {
         type: 'object',
         required: ['id', 'to_list'],
@@ -93,7 +93,7 @@ export const cardTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_assign_card',
-      description: 'Atribui o card a um membro do projeto (e-mail ou nome) ou remove o responsável com null. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.',
+      description: 'Atribui o card a um membro ativo do projeto (e-mail ou nome) ou remove o responsável com null. `null` só é aceito no Backlog.',
       inputSchema: {
         type: 'object',
         required: ['id', 'assignee'],

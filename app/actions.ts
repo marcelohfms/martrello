@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
 import { createCard, updateCard, moveCard, archiveCard, getCardById, assignCard } from '@/lib/core/cards';
-import { listCardEvents } from '@/lib/core/events';
 import { toResult, type ActionResult } from '@/lib/action-result';
 import { addLabelToCard, removeLabelFromCard } from '@/lib/core/labels';
 import { addDependency, removeDependency } from '@/lib/core/dependencies';
@@ -68,15 +67,6 @@ export async function assignCardAction(cardId: string, assignee: string | null):
     revalidatePath(`/project/${card.projectId}`);
     revalidatePath('/sprint');
     return { ok: true };
-  } catch (e) {
-    return toResult(e);
-  }
-}
-
-export async function getCardHistoryAction(cardId: string) {
-  const { actor } = await requireActor();
-  try {
-    return { ok: true as const, history: await listCardEvents(getDb(), actor, cardId) };
   } catch (e) {
     return toResult(e);
   }

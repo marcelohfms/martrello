@@ -41,7 +41,7 @@ export const readTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_search_cards',
-      description: 'Busca cards por substring no título. Filtros opcionais por projeto e responsável. Fora do Backlog precisa de responsável. Sem `assignee`, fica com quem chama.',
+      description: "Busca cards por substring no título. Filtros opcionais por projeto e responsável. Use `assignee: 'me'` para ver só as suas.",
       inputSchema: {
         type: 'object',
         required: ['query'],
