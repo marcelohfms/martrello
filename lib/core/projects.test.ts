@@ -13,12 +13,14 @@ beforeEach(() => {
 });
 
 describe('projects', () => {
-  it('creates a project with default lists', async () => {
+  it('creates a project with the four fixed stage lists', async () => {
     const p = await createProject(db, { name: 'foo' });
     expect(p.name).toBe('foo');
     const fetched = await getProjectByNameOrId(db, 'foo');
     expect(fetched.id).toBe(p.id);
-    expect(fetched.lists.map((l) => l.name)).toEqual(['A fazer', 'Fazendo', 'Feito']);
+    expect(fetched.lists.map((l) => [l.name, l.stage])).toEqual([
+      ['Backlog', 'backlog'], ['A fazer', 'todo'], ['Fazendo', 'doing'], ['Feito', 'done'],
+    ]);
     close();
   });
 
@@ -53,7 +55,7 @@ describe('projects', () => {
       archivedAt: Date.now(),
     });
     const all = await listProjects(db);
-    expect(all[0].listCount).toBe(3);
+    expect(all[0].listCount).toBe(4);
     expect(all[0].cardCount).toBe(1);
     close();
   });

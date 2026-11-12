@@ -1,5 +1,5 @@
 // lib/db/schema.ts
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
@@ -20,11 +20,16 @@ export const lists = sqliteTable(
     id: text('id').primaryKey(),
     projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    // NOT NULL here for app typing; migration 0006 adds the column nullable (SQLite
+    // ADD COLUMN limitation, no table rebuild to avoid cascading deletes) and a guard
+    // aborts the migration if any list is left without a stage.
+    stage: text('stage', { enum: ['backlog', 'todo', 'doing', 'done'] }).notNull(),
     position: integer('position').notNull(),
     createdAt: integer('created_at').notNull(),
   },
   (t) => ({
     byProject: index('lists_by_project').on(t.projectId),
+    byProjectStage: uniqueIndex('lists_project_stage_unique').on(t.projectId, t.stage),
   }),
 );
 
@@ -41,6 +46,8 @@ export const cards = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
     archivedAt: integer('archived_at'),
+    assigneeId: text('assignee_id').references(() => users.id, { onDelete: 'set null' }),
+    completedAt: integer('completed_at'),
   },
   (t) => ({
     byList: index('cards_by_list').on(t.listId),
@@ -89,6 +96,9 @@ export const sprints = sqliteTable('sprints', {
   startedAt: integer('started_at').notNull(),
   closedAt: integer('closed_at'),
   cardsSnapshot: text('cards_snapshot'),
+  // Nullable in SQL because of the migration; core always fills them.
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  weekStart: text('week_start'), // YYYY-MM-DD
 });
 
 export const sprintSlots = sqliteTable(
@@ -128,6 +138,58 @@ export const sessions = sqliteTable(
   }),
 );
 
+export const projectMembers = sqliteTable(
+  'project_members',
+  {
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    addedAt: integer('added_at').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.projectId, t.userId] }),
+  }),
+);
+
+export const cardEvents = sqliteTable(
+  'card_events',
+  {
+    id: text('id').primaryKey(),
+    cardId: text('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+    actorId: text('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    type: text('type').notNull(),
+    fromValue: text('from_value'),
+    toValue: text('to_value'),
+    at: integer('at').notNull(),
+  },
+  (t) => ({
+    byCard: index('card_events_by_card').on(t.cardId),
+  }),
+);
+
+export const mcpTokens = sqliteTable('mcp_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  name: text('name').notNull(),
+  createdAt: integer('created_at').notNull(),
+  lastUsedAt: integer('last_used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
+export const authTokens = sqliteTable('auth_tokens', {
+  idHash: text('id_hash').primaryKey(),
+  kind: text('kind', { enum: ['invite', 'reset'] }).notNull(),
+  email: text('email').notNull(),
+  name: text('name'),
+  userId: text('user_id'),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  usedAt: integer('used_at'),
+  revokedAt: integer('revoked_at'),
+});
+
+export type Stage = 'backlog' | 'todo' | 'doing' | 'done';
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type List = typeof lists.$inferSelect;

@@ -43,6 +43,13 @@
       "when": 1794516625800,
       "tag": "0005_fluffy_luke_cage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794516796745,
+      "tag": "0006_warm_champions",
+      "breakpoints": true
     }
   ]
 }

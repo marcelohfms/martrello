@@ -5,8 +5,8 @@ import { MartrelloError, suggestClosest } from '@/lib/errors';
 import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
 import { suggestAcronym } from './acronym';
+import { STAGES } from './stages';
 
-export const DEFAULT_LISTS = ['A fazer', 'Fazendo', 'Feito'] as const;
 
 export const PROJECT_COLOR_PALETTE = [
   '#8a9a5b', '#6b8e4e', '#a3b18a', '#588157',
@@ -15,7 +15,7 @@ export const PROJECT_COLOR_PALETTE = [
 
 export async function createProject(
   db: Db,
-  input: { name: string; color?: string; acronym?: string; lists?: string[] },
+  input: { name: string; color?: string; acronym?: string },
 ): Promise<Project> {
   const existing = await db.select().from(projects).where(eq(projects.name, input.name));
   if (existing.length > 0) {
@@ -34,7 +34,6 @@ export async function createProject(
   const color = input.color ?? PROJECT_COLOR_PALETTE[Number(totalCount) % PROJECT_COLOR_PALETTE.length];
   const id = ulid();
   const now = Date.now();
-  const listNames = input.lists?.length ? input.lists : [...DEFAULT_LISTS];
 
   db.transaction((tx) => {
     tx.insert(projects).values({
@@ -45,12 +44,13 @@ export async function createProject(
       position: maxPos + POSITION_STEP,
       createdAt: now,
     }).run();
-    for (let i = 0; i < listNames.length; i++) {
+    for (let i = 0; i < STAGES.length; i++) {
       tx.insert(lists).values({
         id: ulid(),
         projectId: id,
-        name: listNames[i],
-        position: POSITION_STEP * (i + 1),
+        name: STAGES[i].name,
+        stage: STAGES[i].stage,
+        position: POSITION_STEP * i,
         createdAt: now,
       }).run();
     }

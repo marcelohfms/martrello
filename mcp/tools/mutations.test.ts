@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { makeTestDb, type Db } from '@/lib/core/test-helpers';
 import * as clientModule from '@/lib/db/client';
 import { projectTools } from './projects';
-import { listTools } from './lists';
 import { labelTools } from './labels';
 
 let db: Db;
@@ -25,14 +24,6 @@ describe('project/list/label tools', () => {
     const p = (await create.handler({ name: 'foo' })) as any;
     expect(p.name).toBe('foo');
     await archive.handler({ project: p.id });
-  });
-
-  it('martrello_create_list under existing project', async () => {
-    const createProj = find(projectTools, 'martrello_create_project');
-    const createList = find(listTools, 'martrello_create_list');
-    const p = (await createProj.handler({ name: 'foo' })) as any;
-    const l = (await createList.handler({ project: 'foo', name: 'Bloqueado' })) as any;
-    expect(l.projectId).toBe(p.id);
   });
 
   it('martrello_create_label works; add_label on a missing card surfaces an error from FK', async () => {

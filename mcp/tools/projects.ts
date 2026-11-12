@@ -7,7 +7,7 @@ export const projectTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_create_project',
-      description: 'Cria um novo projeto. Lists default = ["A fazer","Fazendo","Feito"].',
+      description: 'Cria um novo projeto. Sempre cria as etapas fixas Backlog, A fazer, Fazendo e Feito.',
       inputSchema: {
         type: 'object',
         required: ['name'],
@@ -15,7 +15,6 @@ export const projectTools: MartrelloTool[] = [
           name: { type: 'string' },
           acronym: { type: 'string', description: '3 letras; auto-sugerido se omitido' },
           color: { type: 'string', description: 'hex; default: cycles through a green palette' },
-          lists: { type: 'array', items: { type: 'string' } },
         },
       },
     },
@@ -23,7 +22,6 @@ export const projectTools: MartrelloTool[] = [
       name: String(input.name),
       acronym: input.acronym as string | undefined,
       color: input.color as string | undefined,
-      lists: input.lists as string[] | undefined,
     }),
   },
   {

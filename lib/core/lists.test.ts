@@ -3,67 +3,40 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { makeTestDb, type Db } from './test-helpers';
 import { createProject } from './projects';
 import { createList, renameList, deleteList, reorderLists, getListByNameOrId } from './lists';
+import { getStageList, resolveListRef } from './stages';
 
 let db: Db;
 let close: () => void;
 beforeEach(() => { const t = makeTestDb(); db = t.db; close = t.close; });
 
 describe('lists', () => {
-  it('creates a list at the end of a project', async () => {
+  it('finds a list by name or id', async () => {
     const p = await createProject(db, { name: 'p' });
-    const l = await createList(db, p.id, 'Em revisão');
-    expect(l.projectId).toBe(p.id);
-    const fetched = await getListByNameOrId(db, p.id, 'Em revisão');
-    expect(fetched.id).toBe(l.id);
+    const l = await getListByNameOrId(db, p.id, 'Fazendo');
+    expect((await getListByNameOrId(db, p.id, l.id)).id).toBe(l.id);
     close();
   });
 
-  it('renames a list', async () => {
-    const p = await createProject(db, { name: 'p' });
-    const fazendo = await getListByNameOrId(db, p.id, 'Fazendo');
-    const renamed = await renameList(db, fazendo.id, 'Doing');
-    expect(renamed.name).toBe('Doing');
-    close();
-  });
-
-  it('refuses to delete a non-empty list without force', async () => {
+  it('lists are fixed: create/rename/delete/reorder throw LISTS_ARE_FIXED', async () => {
     const p = await createProject(db, { name: 'p' });
     const l = await getListByNameOrId(db, p.id, 'A fazer');
-    // simulate a card present
-    const { cards } = await import('@/lib/db/schema');
-    await db.insert(cards).values({
-      id: 'c1', projectId: p.id, listId: l.id, title: 't', position: 1000,
-      createdAt: Date.now(), updatedAt: Date.now(),
-    });
-    await expect(deleteList(db, l.id, { force: false })).rejects.toThrow(/LIST_NOT_EMPTY/);
+    await expect(createList(db, p.id, 'Em revisão')).rejects.toThrow(/LISTS_ARE_FIXED/);
+    await expect(renameList(db, l.id, 'X')).rejects.toThrow(/LISTS_ARE_FIXED/);
+    await expect(deleteList(db, l.id)).rejects.toThrow(/LISTS_ARE_FIXED/);
+    await expect(reorderLists(db, p.id, [l.id])).rejects.toThrow(/LISTS_ARE_FIXED/);
     close();
   });
+});
 
-  it('deletes with force, cascading cards', async () => {
+describe('stages', () => {
+  it('getStageList and resolveListRef accept id, list name and stage', async () => {
     const p = await createProject(db, { name: 'p' });
-    const l = await getListByNameOrId(db, p.id, 'A fazer');
-    const { cards } = await import('@/lib/db/schema');
-    await db.insert(cards).values({
-      id: 'c1', projectId: p.id, listId: l.id, title: 't', position: 1000,
-      createdAt: Date.now(), updatedAt: Date.now(),
-    });
-    await deleteList(db, l.id, { force: true });
-    const { eq } = await import('drizzle-orm');
-    const remaining = await db.select().from(cards).where(eq(cards.id, 'c1'));
-    expect(remaining).toHaveLength(0);
-    close();
-  });
-
-  it('reorders lists', async () => {
-    const p = await createProject(db, { name: 'p' });
-    const a = await getListByNameOrId(db, p.id, 'A fazer');
-    const f = await getListByNameOrId(db, p.id, 'Fazendo');
-    const d = await getListByNameOrId(db, p.id, 'Feito');
-    await reorderLists(db, p.id, [d.id, a.id, f.id]);
-    const { lists } = await import('@/lib/db/schema');
-    const { asc, eq } = await import('drizzle-orm');
-    const ordered = await db.select().from(lists).where(eq(lists.projectId, p.id)).orderBy(asc(lists.position));
-    expect(ordered.map((l) => l.id)).toEqual([d.id, a.id, f.id]);
+    const doing = await getStageList(db, p.id, 'doing');
+    expect(doing.name).toBe('Fazendo');
+    expect((await resolveListRef(db, p.id, doing.id)).id).toBe(doing.id);
+    expect((await resolveListRef(db, p.id, 'Fazendo')).id).toBe(doing.id);
+    expect((await resolveListRef(db, p.id, 'doing')).id).toBe(doing.id);
+    await expect(resolveListRef(db, p.id, 'nada')).rejects.toThrow(/LIST_NOT_FOUND/);
     close();
   });
 });
