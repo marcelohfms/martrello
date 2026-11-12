@@ -110,6 +110,29 @@ encerra todas as sessões abertas dessa pessoa.
 As migrações 0005 a 0007 rodam sozinhas na inicialização (`scripts/start.sh`
 executa o migrate). Passo a passo:
 
+0. **Checagem antes do deploy.** Ainda com a versão atual no ar, abra o Console
+   do serviço (Easypanel → service → Console) e cole o bloco abaixo. Ele só lê
+   o banco (abre em modo `readonly`); a imagem não tem o `sqlite3`, por isso o
+   `node`:
+
+   ```bash
+   cd /app && node - <<'CHECK'
+   const D = require('better-sqlite3');
+   const db = new D(process.env.DATABASE_URL.replace(/^file:/, ''), { readonly: true });
+   const q = (titulo, sql) => console.log(titulo, JSON.stringify(db.prepare(sql).all()));
+   q('1. listas fora de A fazer/Fazendo/Feito (precisa ser []):',
+     "SELECT p.name AS projeto, l.name AS lista FROM lists l JOIN projects p ON p.id = l.project_id WHERE l.name NOT IN ('A fazer', 'Fazendo', 'Feito') ORDER BY 1, 2");
+   q('2. nomes de lista repetidos num projeto (precisa ser []):',
+     "SELECT p.name AS projeto, l.name AS lista, COUNT(*) AS n FROM lists l JOIN projects p ON p.id = l.project_id GROUP BY l.project_id, l.name HAVING COUNT(*) > 1");
+   q('3. usuários (precisa incluir marcelo):', 'SELECT username FROM users');
+   q('4. dependências entre projetos (informativo; a 0007 apaga):',
+     'SELECT COUNT(*) AS n FROM card_dependencies d JOIN cards a ON a.id = d.blocked_card_id JOIN cards b ON b.id = d.blocker_card_id WHERE a.project_id <> b.project_id');
+   CHECK
+   ```
+
+   A checagem 1 inclui projetos arquivados. Se 1, 2 ou 3 não derem o esperado,
+   corrija os dados na versão atual (veja as causas em "Se a migração
+   abortar") e rode a checagem de novo antes de seguir.
 1. Backup manual no Console do serviço: `node dist/scripts/backup.js`.
 2. Defina `APP_URL`, `RESEND_API_KEY` e `EMAIL_FROM` e faça o deploy.
 3. Nos logs, confira `migrations applied` seguido de `Ready`.
@@ -124,8 +147,10 @@ executa o migrate). Passo a passo:
    antigos em Feito não aparecem na sprint e continuam no quadro do projeto.
 
 O que a migração faz com os dados: a 0006 aplica o fluxo fixo de listas; a 0007
-move para o Backlog os cards ativos de "A fazer" que não estão na sprint atual
-e remove `sprint_slots`.
+move para o Backlog os cards ativos de "A fazer" que não estão na sprint atual,
+remove `sprint_slots` e apaga as dependências entre cards de projetos
+diferentes (sobras de cards movidos de projeto na versão anterior; não gera
+evento no histórico).
 
 ### Se a migração abortar
 
@@ -138,9 +163,28 @@ A migração é atômica: ao falhar, nada é alterado e o app não sobe. Causas:
   nomes e cria o Backlog por conta própria. Renomeie a lista (pelo MCP ou pela
   interface da versão anterior), mova os cards para uma das três e faça o
   deploy de novo.
+- **Nome de lista repetido no projeto.** O log mostra
+  `UNIQUE constraint failed: lists.project_id, lists.stage` ao criar o índice
+  `lists_project_stage_unique`: um projeto tem duas listas com o mesmo nome
+  (por exemplo, duas "Feito"), que viram a mesma etapa. Mova os cards de uma
+  para a outra, exclua a lista que sobrou e faça o deploy de novo.
 - **Sem usuário admin.** Há dados, mas nenhum usuário com o e-mail do admin
-  (`_admin_guard`). Confira o usuário no banco e faça o deploy de novo; em
-  último caso, restaure o backup do passo 1 (ver Rollback).
+  (`_admin_guard`), o que acontece quando não existe o usuário `marcelo`.
+  Crie-o na versão atual e faça o deploy de novo.
+
+Como o `scripts/start.sh` roda a migração antes de subir o app, o container
+novo entra em loop de reinício. Para voltar ao ar:
+
+1. No Easypanel (service → Source), troque a imagem de `latest` para a tag
+   `sha-<commit>` da versão que estava no ar antes do deploy (veja em GitHub →
+   Packages → `martrello`, ou no histórico de deploys do serviço) e clique em
+   **Deploy**. Como a migração não alterou nada, a versão anterior sobe com o
+   banco como estava.
+2. Corrija os dados conforme a causa acima e rode a checagem do passo 0 de novo.
+3. Volte a imagem para `latest` e faça o deploy.
+
+O backup do passo 1 fica como último recurso (ver Rollback), por exemplo se o
+banco tiver sido alterado por outro motivo.
 
 ## Token pessoal do MCP
 
