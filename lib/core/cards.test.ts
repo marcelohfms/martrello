@@ -380,7 +380,7 @@ describe('cards', () => {
     const { p } = await setup();
     await createCard(db, admin, { project: p.id, title: 'revisar PR #123' });
     await createCard(db, admin, { project: p.id, title: 'criar landing' });
-    const out = await searchCards(db, { query: 'revisar' });
+    const out = await searchCards(db, admin, { query: 'revisar' });
     expect(out.map((c) => c.title)).toEqual(['revisar PR #123']);
   });
 

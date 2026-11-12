@@ -11,7 +11,7 @@ import { SYSTEM_ACTOR } from '@/lib/access/actor';
 // overwriting any color a human has since picked by hand.
 async function main() {
   const db = getDb();
-  const all = await listProjects(db, { includeArchived: true });
+  const all = await listProjects(db, SYSTEM_ACTOR, { includeArchived: true });
 
   let colorIndex = 0;
   for (const p of all) {

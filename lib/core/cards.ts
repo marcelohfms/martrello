@@ -1,13 +1,13 @@
 // lib/core/cards.ts
-import { and, desc, eq, max, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, max, isNull, or, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
 import { cards, lists, cardLabels, labels, sprintSlots, users, type Card, type Label, type List, type Stage } from '@/lib/db/schema';
 import { MartrelloError } from '@/lib/errors';
-import type { Actor } from '@/lib/access/actor';
-import { assertProjectVisible, loadVisibleCard } from '@/lib/access/guard';
+import { actorUserId, type Actor } from '@/lib/access/actor';
+import { loadVisibleCard, visibleProjectIds } from '@/lib/access/guard';
 import { POSITION_STEP } from './positions';
 import { parseDate } from './dates';
-import { getProjectByNameOrId } from './projects';
+import { getProject } from './projects';
 import { getLabelByNameOrId } from './labels';
 import { getBlockedStatuses, type DependencyInfo } from './dependencies';
 import { STAGES, getStageList, resolveListRef } from './stages';
@@ -83,8 +83,7 @@ export async function createCard(
     assignee?: string;
   },
 ): Promise<Card> {
-  const project = await getProjectByNameOrId(db, input.project);
-  await assertProjectVisible(db, actor, project.id);
+  const project = await getProject(db, actor, input.project);
   const list = input.list
     ? await resolveListRef(db, project.id, input.list)
     : await getStageList(db, project.id, 'backlog');
@@ -191,8 +190,7 @@ export async function moveCard(
 
   let targetProjectId = card.projectId;
   if (target.toProject) {
-    targetProjectId = (await getProjectByNameOrId(db, target.toProject)).id;
-    await assertProjectVisible(db, actor, targetProjectId);
+    targetProjectId = (await getProject(db, actor, target.toProject)).id;
   }
   const fromList = await loadList(db, card.listId);
   const toList = await resolveTargetList(db, targetProjectId, target.toList);
@@ -294,7 +292,14 @@ export async function unarchiveCard(db: Db, actor: Actor, id: string): Promise<v
 
 export async function searchCards(
   db: Db,
-  opts: { query: string; project?: string; label?: string; includeArchived?: boolean },
+  actor: Actor,
+  opts: {
+    query: string;
+    project?: string;
+    label?: string;
+    includeArchived?: boolean;
+    assignee?: string | 'me';
+  },
 ): Promise<Card[]> {
   const pattern = `%${opts.query.toLowerCase()}%`;
   const where = [
@@ -302,9 +307,26 @@ export async function searchCards(
   ];
   if (!opts.includeArchived) where.push(isNull(cards.archivedAt));
   if (opts.project) {
-    const p = await getProjectByNameOrId(db, opts.project);
+    const p = await getProject(db, actor, opts.project);
     where.push(eq(cards.projectId, p.id));
+  } else {
+    const visible = await visibleProjectIds(db, actor);
+    if (visible !== null) where.push(inArray(cards.projectId, visible));
   }
-  const rows = await db.select().from(cards).where(and(...where)).orderBy(desc(cards.updatedAt));
-  return rows;
+  if (opts.assignee) {
+    const ref = opts.assignee.trim();
+    if (ref === 'me') {
+      const me = actorUserId(actor);
+      if (!me) throw new MartrelloError('INVALID_INPUT', "'me' exige um usuário autenticado");
+      where.push(eq(cards.assigneeId, me));
+    } else {
+      const matches = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(or(eq(users.id, ref), eq(users.email, ref.toLowerCase()), eq(users.name, ref)));
+      if (matches.length === 0) return [];
+      where.push(inArray(cards.assigneeId, matches.map((m) => m.id)));
+    }
+  }
+  return db.select().from(cards).where(and(...where)).orderBy(desc(cards.updatedAt));
 }

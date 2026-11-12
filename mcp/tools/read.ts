@@ -1,6 +1,6 @@
 // mcp/tools/read.ts
 import { getDb } from '@/lib/db/client';
-import { listProjects, getProjectByNameOrId } from '@/lib/core/projects';
+import { listProjects, getProject } from '@/lib/core/projects';
 import { listLabels } from '@/lib/core/labels';
 import { searchCards } from '@/lib/core/cards';
 import { getActiveSprint, listSprints, getSprintHistory } from '@/lib/core/sprint';
@@ -16,7 +16,7 @@ export const readTools: MartrelloTool[] = [
         properties: { include_archived: { type: 'boolean', default: false } },
       },
     },
-    handler: async (input) => listProjects(getDb(), { includeArchived: Boolean(input.include_archived) }),
+    handler: async (input, { actor }) => listProjects(getDb(), actor, { includeArchived: Boolean(input.include_archived) }),
   },
   {
     definition: {
@@ -28,7 +28,7 @@ export const readTools: MartrelloTool[] = [
         properties: { project: { type: 'string', description: 'name ou id' } },
       },
     },
-    handler: async (input) => getProjectByNameOrId(getDb(), String(input.project)),
+    handler: async (input, { actor }) => getProject(getDb(), actor, String(input.project)),
   },
   {
     definition: {
@@ -50,14 +50,16 @@ export const readTools: MartrelloTool[] = [
           project: { type: 'string' },
           label: { type: 'string' },
           include_archived: { type: 'boolean', default: false },
+          assignee: { type: 'string', description: "e-mail, nome, id ou 'me'" },
         },
       },
     },
-    handler: async (input) => searchCards(getDb(), {
+    handler: async (input, { actor }) => searchCards(getDb(), actor, {
       query: String(input.query),
       project: input.project as string | undefined,
       label: input.label as string | undefined,
       includeArchived: Boolean(input.include_archived),
+      assignee: input.assignee as string | undefined,
     }),
   },
   {

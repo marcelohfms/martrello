@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, max, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
 import { projects, lists, cards, type Project, type List } from '@/lib/db/schema';
 import { MartrelloError, suggestClosest } from '@/lib/errors';
@@ -7,7 +7,7 @@ import type { Db } from './test-helpers';
 import { suggestAcronym } from './acronym';
 import { STAGES } from './stages';
 import type { Actor } from '@/lib/access/actor';
-import { assertAdmin } from '@/lib/access/guard';
+import { assertAdmin, visibleProjectIds } from '@/lib/access/guard';
 
 
 export const PROJECT_COLOR_PALETTE = [
@@ -66,12 +66,15 @@ export async function createProject(
 
 export async function listProjects(
   db: Db,
+  actor: Actor,
   opts: { includeArchived?: boolean } = {},
 ): Promise<Array<Project & { listCount: number; cardCount: number }>> {
+  const visible = await visibleProjectIds(db, actor);
   const baseQuery = db.select().from(projects).orderBy(asc(projects.position));
-  const projectRows = opts.includeArchived
-    ? await baseQuery
-    : await baseQuery.where(isNull(projects.archivedAt));
+  const conditions = [];
+  if (!opts.includeArchived) conditions.push(isNull(projects.archivedAt));
+  if (visible !== null) conditions.push(inArray(projects.id, visible));
+  const projectRows = conditions.length > 0 ? await baseQuery.where(and(...conditions)) : await baseQuery;
 
   const listCountRows = await db
     .select({ projectId: lists.projectId, c: count() })
@@ -93,16 +96,23 @@ export async function listProjects(
   }));
 }
 
+/**
+ * Internal lookup by id or name. `visibleIds` (null = everything) scopes both the match and the
+ * name suggestions, so an invisible project is indistinguishable from a nonexistent one.
+ * Callers acting for a user go through `getProject`.
+ */
 export async function getProjectByNameOrId(
   db: Db,
   nameOrId: string,
+  visibleIds: string[] | null = null,
 ): Promise<Project & { lists: List[] }> {
+  const scope = visibleIds === null ? undefined : inArray(projects.id, visibleIds);
   const found =
-    (await db.select().from(projects).where(eq(projects.id, nameOrId)))[0] ??
-    (await db.select().from(projects).where(eq(projects.name, nameOrId)))[0];
+    (await db.select().from(projects).where(and(eq(projects.id, nameOrId), scope)))[0] ??
+    (await db.select().from(projects).where(and(eq(projects.name, nameOrId), scope)))[0];
 
   if (!found) {
-    const all = await db.select({ name: projects.name }).from(projects);
+    const all = await db.select({ name: projects.name }).from(projects).where(scope);
     throw new MartrelloError(
       'PROJECT_NOT_FOUND',
       `Projeto '${nameOrId}' não existe`,
@@ -117,6 +127,15 @@ export async function getProjectByNameOrId(
     .orderBy(asc(lists.position));
 
   return { ...found, lists: listRows };
+}
+
+/** Public lookup: only projects the actor can see. */
+export async function getProject(
+  db: Db,
+  actor: Actor,
+  nameOrId: string,
+): Promise<Project & { lists: List[] }> {
+  return getProjectByNameOrId(db, nameOrId, await visibleProjectIds(db, actor));
 }
 
 export async function updateProject(

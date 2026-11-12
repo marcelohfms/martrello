@@ -35,9 +35,9 @@ describe('projects', () => {
     const a = await createProject(db, SYSTEM_ACTOR, { name: 'a' });
     const b = await createProject(db, SYSTEM_ACTOR, { name: 'b' });
     await archiveProject(db, SYSTEM_ACTOR, b.id);
-    const all = await listProjects(db);
+    const all = await listProjects(db, SYSTEM_ACTOR);
     expect(all.map((p) => p.id)).toEqual([a.id]);
-    const withArchived = await listProjects(db, { includeArchived: true });
+    const withArchived = await listProjects(db, SYSTEM_ACTOR, { includeArchived: true });
     expect(withArchived).toHaveLength(2);
     close();
   });
@@ -55,7 +55,7 @@ describe('projects', () => {
       position: 2000, createdAt: Date.now(), updatedAt: Date.now(),
       archivedAt: Date.now(),
     });
-    const all = await listProjects(db);
+    const all = await listProjects(db, SYSTEM_ACTOR);
     expect(all[0].listCount).toBe(4);
     expect(all[0].cardCount).toBe(1);
     close();
@@ -74,7 +74,7 @@ describe('projects', () => {
     const b = await createProject(db, SYSTEM_ACTOR, { name: 'b' });
     const c = await createProject(db, SYSTEM_ACTOR, { name: 'c' });
     await reorderProjects(db, SYSTEM_ACTOR, [c.id, a.id, b.id]);
-    const ordered = await listProjects(db);
+    const ordered = await listProjects(db, SYSTEM_ACTOR);
     expect(ordered.map((p) => p.name)).toEqual(['c', 'a', 'b']);
     close();
   });

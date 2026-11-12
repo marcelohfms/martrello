@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { makeTestDb, makeUser, type Db } from '@/lib/core/test-helpers';
+import { makeTestDb, makeUser, addMemberRow, type Db } from '@/lib/core/test-helpers';
 import { createProject } from '@/lib/core/projects';
 import { createLabel } from '@/lib/core/labels';
+import { createCard } from '@/lib/core/cards';
 import * as clientModule from '@/lib/db/client';
 import { readTools } from './read';
 import type { ToolCtx } from './index';
@@ -34,5 +35,24 @@ describe('read tools', () => {
     await createProject(db, ctx.actor, { name: 'martrello' });
     const tool = readTools.find((t) => t.definition.name === 'martrello_get_project')!;
     await expect(tool.handler({ project: 'martelo' }, ctx)).rejects.toThrow(/PROJECT_NOT_FOUND/);
+  });
+});
+
+describe('read tools visibility', () => {
+  it('um membro só vê os projetos e cards dos seus projetos', async () => {
+    const p1 = await createProject(db, ctx.actor, { name: 'aberto' });
+    const p2 = await createProject(db, ctx.actor, { name: 'fechado' });
+    const { user, actor } = await makeUser(db);
+    addMemberRow(db, p1.id, user.id);
+    await createCard(db, ctx.actor, { project: p1.id, title: 'tarefa' });
+    await createCard(db, ctx.actor, { project: p2.id, title: 'tarefa oculta' });
+    const mctx: ToolCtx = { actor };
+    const get = (n: string) => readTools.find((t) => t.definition.name === n)!;
+
+    const projects = (await get('martrello_list_projects').handler({}, mctx)) as Array<{ name: string }>;
+    expect(projects.map((p) => p.name)).toEqual(['aberto']);
+    const cards = (await get('martrello_search_cards').handler({ query: 'tarefa' }, mctx)) as Array<{ title: string }>;
+    expect(cards.map((c) => c.title)).toEqual(['tarefa']);
+    await expect(get('martrello_get_project').handler({ project: 'fechado' }, mctx)).rejects.toThrow(/PROJECT_NOT_FOUND/);
   });
 });

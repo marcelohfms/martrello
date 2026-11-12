@@ -22,7 +22,7 @@ export async function visibleProjectIds(db: Db, a: Actor): Promise<string[] | nu
 export async function assertProjectVisible(db: Db, a: Actor, projectId: string): Promise<void> {
   const ids = await visibleProjectIds(db, a);
   if (ids !== null && !ids.includes(projectId)) {
-    throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto '${projectId}' não encontrado`);
+    throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto '${projectId}' não existe`);
   }
 }
 

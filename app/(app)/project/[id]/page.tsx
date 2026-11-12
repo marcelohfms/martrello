@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/client';
-import { getProjectByNameOrId } from '@/lib/core/projects';
+import { requireActor } from '@/lib/auth/current-user';
+import { getProject } from '@/lib/core/projects';
 import { getBlockedStatuses } from '@/lib/core/dependencies';
 import { getActiveSprintRow } from '@/lib/core/sprint';
 import { cards as cardsTbl, labels as labelsTbl, cardLabels, sprintSlots } from '@/lib/db/schema';
@@ -13,9 +14,10 @@ import { ProjectHeaderName } from '@/components/ProjectHeaderName';
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const db = getDb();
+  const { actor } = await requireActor();
   let project;
   try {
-    project = await getProjectByNameOrId(db, id);
+    project = await getProject(db, actor, id);
   } catch {
     notFound();
   }
