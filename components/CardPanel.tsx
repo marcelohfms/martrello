@@ -76,7 +76,7 @@ export function CardPanel({ cardId, onClose }: Props) {
     labels: Array<{ name: string; color: string }>;
     dependsOn: Array<{ id: string; title: string; isDone: boolean }>;
     stage: string;
-    assignee: { name: string; email: string } | null;
+    assignee: { name: string; email: string; disabled: boolean } | null;
   };
   const allLabels = data.allLabels as Array<{ name: string; color: string }>;
   const presentNames = new Set(card.labels.map((l) => l.name));
@@ -166,7 +166,7 @@ export function CardPanel({ cardId, onClose }: Props) {
           <SectionLabel>Responsável</SectionLabel>
           <AssigneePicker
             members={members}
-            value={card.assignee?.email ?? null}
+            current={card.assignee}
             allowNone={card.stage === 'backlog'}
             disabled={pending}
             onChange={assign}

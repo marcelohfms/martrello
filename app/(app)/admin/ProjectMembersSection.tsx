@@ -2,8 +2,10 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProjectLabel } from '@/components/ProjectLabel';
+import { useProjectPrivacy } from '@/components/ProjectPrivacyContext';
 import type { ActionResult as AdminResult } from '@/lib/action-result';
 import { addMemberAction, removeMemberAction } from './actions';
+import { removeMemberConfirmMessage } from './remove-member-message';
 
 type Member = { id: string; name: string; email: string; disabled: boolean; isAdmin: boolean };
 type ProjectRow = { id: string; name: string; acronym: string; color: string; members: Member[] };
@@ -12,6 +14,7 @@ export function ProjectMembersSection({ projects, people }: { projects: ProjectR
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const { revealed } = useProjectPrivacy();
 
   function handle(r: AdminResult) {
     if ('error' in r) setError(r.error);
@@ -49,7 +52,10 @@ export function ProjectMembersSection({ projects, people }: { projects: ProjectR
                     disabled={pending}
                     className="btn btn-ghost shrink-0"
                     aria-label={`Remover ${m.name} do projeto`}
-                    onClick={() => start(async () => handle(await removeMemberAction(p.id, m.id)))}
+                    onClick={() => {
+                      if (!window.confirm(removeMemberConfirmMessage(m.name, revealed ? p.name : p.acronym))) return;
+                      start(async () => handle(await removeMemberAction(p.id, m.id)));
+                    }}
                   >
                     Remover
                   </button>}
