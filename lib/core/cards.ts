@@ -53,16 +53,18 @@ async function resolveTargetList(db: Db, projectId: string, ref: string): Promis
 }
 
 /**
- * The assignee a card must have once it sits in `stage` of `projectId`. Backlog keeps whatever it
- * has. Outside it the card needs someone: when it has nobody, or sits in A fazer/Fazendo with an
- * assignee who is no longer an active member, the actor takes over (system → ASSIGNEE_REQUIRED).
- * Feito keeps an ineligible assignee as the record of who did it.
+ * The assignee a card must have once it sits in `stage` of `projectId`, coming from `fromStage`.
+ * Backlog keeps whatever it has. Outside it the card needs an active member: when it has nobody,
+ * or an assignee who is no longer an active member, the actor takes over (system →
+ * ASSIGNEE_REQUIRED). The one exception is a card that already sits in Feito (a reorder, or an
+ * unarchive): it keeps an ineligible assignee as the record of who did it.
  */
 async function settleAssignee(
-  db: Db, actor: Actor, projectId: string, stage: Stage, currentId: string | null,
+  db: Db, actor: Actor, projectId: string, fromStage: Stage, stage: Stage, currentId: string | null,
 ): Promise<string | null> {
   if (stage === 'backlog') return currentId;
-  if (currentId && (stage === 'done' || (await isActiveMember(db, projectId, currentId)))) return currentId;
+  if (currentId && stage === 'done' && fromStage === 'done') return currentId;
+  if (currentId && (await isActiveMember(db, projectId, currentId))) return currentId;
   return actorAsAssignee(actor);
 }
 
@@ -196,12 +198,12 @@ export async function moveCard(
   const toList = await resolveTargetList(db, targetProjectId, target.toList);
   const projectChanged = targetProjectId !== card.projectId;
 
-  if (projectChanged && card.assigneeId && (toList.stage === 'backlog' || toList.stage === 'done')) {
-    // Backlog and Feito keep the assignee, so it must be an active member of the destination.
+  if (projectChanged && card.assigneeId) {
+    // Spec §7: moving to another project requires the assignee to be a member there, in any stage.
     await assertActiveMember(db, targetProjectId, card.assigneeId);
   }
 
-  const assigneeId = await settleAssignee(db, actor, targetProjectId, toList.stage, card.assigneeId);
+  const assigneeId = await settleAssignee(db, actor, targetProjectId, fromList.stage, toList.stage, card.assigneeId);
   const assigneeChanged = assigneeId !== card.assigneeId;
   const prevEmail = assigneeChanged ? await userEmail(db, card.assigneeId) : null;
   const nextEmail = assigneeChanged ? await userEmail(db, assigneeId) : null;
@@ -283,7 +285,7 @@ export async function unarchiveCard(db: Db, actor: Actor, id: string): Promise<v
   const card = await loadVisibleCard(db, actor, id);
   if (card.archivedAt == null) return;
   const list = await loadList(db, card.listId);
-  const assigneeId = await settleAssignee(db, actor, card.projectId, list.stage, card.assigneeId);
+  const assigneeId = await settleAssignee(db, actor, card.projectId, list.stage, list.stage, card.assigneeId);
   const assigneeChanged = assigneeId !== card.assigneeId;
   const prevEmail = assigneeChanged ? await userEmail(db, card.assigneeId) : null;
   const nextEmail = assigneeChanged ? await userEmail(db, assigneeId) : null;

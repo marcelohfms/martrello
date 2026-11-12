@@ -57,9 +57,12 @@ export async function removeMember(db: Db, actor: Actor, projectId: string, user
 }
 
 /**
- * Sends the user's active A fazer / Fazendo cards back to the end of their own project's
- * Backlog, unassigned, recording the assignee and stage events as `actor`. Done and archived
- * cards are untouched. Synchronous so it composes inside a caller's transaction.
+ * Takes the user off their active cards before they leave (removal from a project, or
+ * deactivation): A fazer / Fazendo cards go to the end of their own project's Backlog,
+ * unassigned (assignee and stage events); Backlog cards stay where they are, unassigned
+ * (assignee event). All events are recorded as `actor`. Feito and archived cards are
+ * untouched. Returns how many cards changed. Synchronous so it composes inside a caller's
+ * transaction.
  */
 export function unassignOpenCards(db: SyncDb, actor: Actor, userId: string, projectId?: string): number {
   const stageName = (s: string) => STAGES.find((x) => x.stage === s)!.name;
@@ -67,7 +70,7 @@ export function unassignOpenCards(db: SyncDb, actor: Actor, userId: string, proj
   const filters = [
     eq(cards.assigneeId, userId),
     isNull(cards.archivedAt),
-    inArray(lists.stage, ['todo', 'doing']),
+    inArray(lists.stage, ['backlog', 'todo', 'doing']),
   ];
   if (projectId) filters.push(eq(cards.projectId, projectId));
   const open = db
@@ -78,9 +81,15 @@ export function unassignOpenCards(db: SyncDb, actor: Actor, userId: string, proj
     .orderBy(cards.projectId, cards.position)
     .all();
 
-  const backlogs = new Map<string, { listId: string; next: number }>();
   const now = Date.now();
-  for (const c of open) {
+  // Backlog cards first, so the end-of-Backlog position below already accounts for them.
+  for (const c of open.filter((x) => x.stage === 'backlog')) {
+    db.update(cards).set({ assigneeId: null, updatedAt: now }).where(eq(cards.id, c.id)).run();
+    recordCardEvent(db, { cardId: c.id, actor, type: 'assignee', from: email, to: null, at: now });
+  }
+
+  const backlogs = new Map<string, { listId: string; next: number }>();
+  for (const c of open.filter((x) => x.stage !== 'backlog')) {
     let b = backlogs.get(c.projectId);
     if (!b) {
       const list = db

@@ -70,7 +70,7 @@ describe('members', () => {
     close();
   });
 
-  it('removeMember devolve só as tarefas em A fazer/Fazendo ao Backlog sem responsável', async () => {
+  it('removeMember devolve A fazer/Fazendo ao Backlog e tira o responsável do Backlog', async () => {
     const { admin, bob, p } = await setup();
     const todo = await createCard(db, admin.actor, { project: p.id, title: 't', list: 'todo', assignee: 'bob@t.local' });
     const doing = await createCard(db, admin.actor, { project: p.id, title: 'd', list: 'doing', assignee: 'bob@t.local' });
@@ -87,7 +87,13 @@ describe('members', () => {
       expect(r.listId).not.toBe(c.listId);
     }
     expect((await getCardById(db, admin.actor, done.id)).assignee?.email).toBe('bob@t.local');
-    expect((await getCardById(db, admin.actor, back.id)).assignee?.email).toBe('bob@t.local');
+    const backAfter = await getCardById(db, admin.actor, back.id);
+    expect(backAfter.assignee).toBeNull();
+    expect(backAfter.listId).toBe(back.listId);
+    expect(backAfter.position).toBe(back.position);
+    const backEv = await listCardEvents(db, admin.actor, back.id);
+    expect(backEv.at(-1)).toMatchObject({ type: 'assignee', from: 'bob@t.local', to: null, actorName: admin.user.name });
+    expect(backEv.filter((e) => e.type === 'stage')).toEqual([]);
     expect((await getCardById(db, admin.actor, archived.id)).assignee?.email).toBe('bob@t.local');
     const rows = await db.select().from(projectMembers).where(eq(projectMembers.userId, bob.user.id));
     expect(rows).toHaveLength(0);
@@ -105,17 +111,24 @@ describe('members', () => {
     const existing = await createCard(db, admin.actor, { project: p.id, title: 'x' });
     const a = await createCard(db, admin.actor, { project: p.id, title: 'a', list: 'todo', assignee: 'bob@t.local' });
     const b = await createCard(db, admin.actor, { project: p2.id, title: 'b', list: 'doing', assignee: 'bob@t.local' });
+    const bl = await createCard(db, admin.actor, { project: p2.id, title: 'bl', assignee: 'bob@t.local' });
 
     expect(unassignOpenCards(db, admin.actor, bob.user.id, p.id)).toBe(1);
     expect((await getCardById(db, admin.actor, b.id)).assignee?.email).toBe('bob@t.local');
+    expect((await getCardById(db, admin.actor, bl.id)).assignee?.email).toBe('bob@t.local');
     const moved = await getCardById(db, admin.actor, a.id);
     expect(moved.listId).toBe(existing.listId);
     expect(moved.position).toBeGreaterThan(existing.position);
 
-    expect(unassignOpenCards(db, admin.actor, bob.user.id)).toBe(1);
+    expect(unassignOpenCards(db, admin.actor, bob.user.id)).toBe(2);
     const mb = await getCardById(db, admin.actor, b.id);
     expect(mb.assignee).toBeNull();
     expect(mb.projectId).toBe(p2.id);
+    const mbl = await getCardById(db, admin.actor, bl.id);
+    expect(mbl.assignee).toBeNull();
+    expect(mbl.listId).toBe(bl.listId);
+    // The Backlog card stays where it was; the A fazer/Fazendo one goes after it.
+    expect(mb.position).toBeGreaterThan(mbl.position);
     close();
   });
 });

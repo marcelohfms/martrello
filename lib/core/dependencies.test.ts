@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { makeTestDb, makeUser, type Db } from './test-helpers';
-import { lists as listsTable } from '@/lib/db/schema';
+import { cardDependencies, lists as listsTable } from '@/lib/db/schema';
 import { listCardEvents } from './events';
 import type { Actor } from '@/lib/access/actor';
 import { createProject, getProjectByNameOrId } from './projects';
@@ -171,6 +171,25 @@ describe('dependencies', () => {
     const statuses = await getBlockedStatuses(db, [a.id, b.id]);
     expect(statuses.get(a.id)).toEqual({ isBlocked: false, dependsOn: [] });
     expect(statuses.get(b.id)!.isBlocked).toBe(true);
+    close();
+  });
+
+  it('getBlockedStatuses ignora bloqueadores de outro projeto (resto de dados antigos)', async () => {
+    const { p } = await setup('p');
+    const { p: q } = await setup('q');
+    const a = await createCard(db, admin, { project: p.id, title: 'mesmo projeto' });
+    const b = await createCard(db, admin, { project: p.id, title: 'bloqueado' });
+    const hidden = await createCard(db, admin, { project: q.id, title: 'título secreto' });
+    await addDependency(db, admin, b.id, a.id);
+    // A leftover edge from before dependencies were dropped on project moves.
+    db.insert(cardDependencies).values({ blockedCardId: b.id, blockerCardId: hidden.id, createdAt: 1 }).run();
+    const status = (await getBlockedStatuses(db, [b.id])).get(b.id)!;
+    expect(status.dependsOn.map((d) => d.title)).toEqual(['mesmo projeto']);
+    expect(status.isBlocked).toBe(true);
+    await moveCard(db, admin, a.id, { toList: 'Feito' });
+    expect((await getBlockedStatuses(db, [b.id])).get(b.id)).toEqual({
+      isBlocked: false, dependsOn: [{ id: a.id, title: 'mesmo projeto', isDone: true }],
+    });
     close();
   });
 

@@ -120,10 +120,10 @@ Levantado no código em 2026-11-12:
   não, e tem rate limit por IP e por e-mail.
 - A regra de senha atual continua: mínimo de 12 caracteres.
 - Trocar a senha encerra as outras sessões, como já acontece hoje.
-- A desativação só mexe nas tarefas ativas em A fazer e Fazendo, que voltam
-  para o Backlog sem responsável. Tarefas em Feito e arquivadas mantêm o
-  responsável, como registro de quem fez. O histórico guarda quem era o
-  responsável antes.
+- A desativação só mexe nas tarefas ativas: as de A fazer e Fazendo voltam
+  para o Backlog sem responsável, e as que já estão no Backlog ficam lá, sem
+  responsável. Tarefas em Feito e arquivadas mantêm o responsável, como
+  registro de quem fez. O histórico guarda quem era o responsável antes.
 - Um convite para um e-mail que já tem conta ativa dá erro na área de admin.
   Uma conta desativada pode ser reativada pelo admin. A reativação não devolve
   tarefas nem projetos: o admin readiciona a pessoa aos projetos e reatribui o
@@ -143,10 +143,12 @@ Levantado no código em 2026-11-12:
 *Decisões do Claude:*
 - Remover alguém de um projeto tem o mesmo efeito da desativação, só naquele
   projeto: as tarefas da pessoa ali em A fazer e Fazendo voltam para o Backlog
-  sem responsável. As que estão em Feito ou arquivadas mantêm o responsável.
+  sem responsável, e as do Backlog perdem o responsável. As que estão em Feito
+  ou arquivadas mantêm o responsável.
 - Um responsável inativo ou que não é mais membro só pode existir em tarefas
   em Feito ou arquivadas. Para atribuir uma tarefa nova, a pessoa precisa ser
-  membro ativo do projeto.
+  membro ativo do projeto. Uma tarefa que entra em Feito vinda de outra etapa
+  com um responsável assim passa para quem fez a ação.
 - Ao criar um projeto, o admin vira membro automaticamente.
 
 ## 7. Listas, responsável e sprint pessoal (decisões do Marcelo)

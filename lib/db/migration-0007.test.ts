@@ -83,6 +83,17 @@ describe('migration 0007', () => {
     expect(stageOf('c2')).toBe('backlog');
   });
 
+  it('apaga dependências entre projetos diferentes e mantém as do mesmo projeto', () => {
+    sqlite.exec(`
+      INSERT INTO card_dependencies (blocked_card_id, blocker_card_id, created_at) VALUES
+        ('c2','c3',1),('c3','c6',1),('c4','c1',1),('c6','c4',1);
+    `);
+    migrateTo(sqlite, '0007');
+    const deps = q(`SELECT blocked_card_id AS a, blocker_card_id AS b FROM card_dependencies ORDER BY a`);
+    expect(deps).toEqual([{ a: 'c2', b: 'c3' }, { a: 'c6', b: 'c4' }]);
+    expect(q(`SELECT 1 FROM card_events WHERE type LIKE 'dependency%'`)).toEqual([]);
+  });
+
   it('impede duas sprints do mesmo usuário na mesma semana', () => {
     migrateTo(sqlite, '0007');
     sqlite.exec(`INSERT INTO sprints (id, started_at, user_id, week_start) VALUES ('A',1,'u1','2026-11-16')`);

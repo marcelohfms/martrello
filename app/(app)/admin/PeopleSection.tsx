@@ -121,7 +121,7 @@ export function PeopleSection({ users, invites, currentUserId }: { users: Person
                 disabled={pending}
                 className="btn btn-danger-ghost shrink-0"
                 onClick={() => {
-                  if (!window.confirm(`Desativar ${u.name}? A pessoa perde o acesso agora e as tarefas em A fazer e Fazendo voltam para o Backlog.`)) return;
+                  if (!window.confirm(`Desativar ${u.name}? A pessoa perde o acesso agora, as tarefas em A fazer e Fazendo voltam para o Backlog e ela deixa de ser responsável pelas do Backlog.`)) return;
                   start(async () => handleResult(await deactivateUserAction(u.id)));
                 }}
               >

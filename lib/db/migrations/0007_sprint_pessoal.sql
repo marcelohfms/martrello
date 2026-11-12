@@ -24,4 +24,10 @@ UPDATE `cards`
       SELECT ss.`card_id` FROM `sprint_slots` ss JOIN `sprints` s ON s.`id` = ss.`sprint_id` WHERE s.`closed_at` IS NULL
     );--> statement-breakpoint
 DROP TABLE `sprint_slots`;--> statement-breakpoint
+-- Dependencies never cross projects, but the old moveCard kept them when a card
+-- changed project. Drop those leftovers so a blocker's title never shows on a card
+-- of another project. No event is recorded for this cleanup.
+DELETE FROM `card_dependencies`
+  WHERE (SELECT a.`project_id` FROM `cards` a WHERE a.`id` = `card_dependencies`.`blocked_card_id`)
+     <> (SELECT b.`project_id` FROM `cards` b WHERE b.`id` = `card_dependencies`.`blocker_card_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `sprints_user_week_unique` ON `sprints` (`user_id`,`week_start`);

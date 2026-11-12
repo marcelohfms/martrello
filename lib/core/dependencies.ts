@@ -89,6 +89,10 @@ export async function getBlockedStatuses(db: Db, cardIds: string[]): Promise<Map
   const depRows = await db.select().from(cardDependencies).where(inArray(cardDependencies.blockedCardId, cardIds));
   if (depRows.length === 0) return result;
 
+  const blockedProject = new Map(
+    (await db.select({ id: cards.id, projectId: cards.projectId }).from(cards).where(inArray(cards.id, cardIds)))
+      .map((c) => [c.id, c.projectId]),
+  );
   const blockerIds = [...new Set(depRows.map((r) => r.blockerCardId))];
   const blockerCards = await db.select().from(cards).where(inArray(cards.id, blockerIds));
   const blockerById = new Map(blockerCards.map((c) => [c.id, c]));
@@ -101,7 +105,13 @@ export async function getBlockedStatuses(db: Db, cardIds: string[]): Promise<Map
   );
 
   for (const cardId of cardIds) {
-    const deps = depRows.filter((d) => d.blockedCardId === cardId);
+    // Dependencies never cross projects; an edge left over from older data must not leak the
+    // title of a card in a project the viewer may not see, so it is ignored.
+    const deps = depRows.filter((d) => {
+      if (d.blockedCardId !== cardId) return false;
+      const blocker = blockerById.get(d.blockerCardId);
+      return !blocker || blocker.projectId === blockedProject.get(cardId);
+    });
     if (deps.length === 0) continue;
     const dependsOn: DependencyInfo[] = deps.map((d) => {
       const blocker = blockerById.get(d.blockerCardId);

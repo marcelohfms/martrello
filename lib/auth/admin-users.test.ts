@@ -23,6 +23,7 @@ describe('admin-users', () => {
     const p = await createProject(db, admin.actor, { name: 'P' });
     await addMember(db, admin.actor, p.id, bob.user.id);
     const card = await createCard(db, admin.actor, { project: p.id, title: 'c', list: 'doing', assignee: 'bob@t.local' });
+    const backlogCard = await createCard(db, admin.actor, { project: p.id, title: 'b', assignee: 'bob@t.local' });
     const { token } = await createSession(db, bob.user.id);
     expect(await validateSession(db, token)).not.toBeNull();
     db.insert(mcpTokens).values({ id: 't1', userId: bob.user.id, tokenHash: 'h1', name: 'n', createdAt: 1 }).run();
@@ -34,6 +35,9 @@ describe('admin-users', () => {
     expect(tok?.revokedAt).not.toBeNull();
     expect(db.select().from(projectMembers).where(eq(projectMembers.userId, bob.user.id)).all()).toHaveLength(0);
     expect((await getCardById(db, admin.actor, card.id)).assignee).toBeNull();
+    const backlogAfter = await getCardById(db, admin.actor, backlogCard.id);
+    expect(backlogAfter.assignee).toBeNull();
+    expect(backlogAfter.listId).toBe(backlogCard.listId);
     expect(db.select().from(users).where(eq(users.id, bob.user.id)).get()?.disabledAt).not.toBeNull();
     close();
   });
