@@ -22,6 +22,8 @@ export default async function SprintPage() {
       projectAcronym: c.projectAcronym,
       projectColor: c.projectColor,
       isBlocked: c.isBlocked,
+      assignee: null, // the sprint is personal: every card is the viewer's
+      completedAt: c.stage === 'done' ? c.completedAt : null,
     });
   }
 

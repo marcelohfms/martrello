@@ -14,6 +14,8 @@ const card: CardData = {
   projectAcronym: 'AXV',
   projectColor: '#6b8e4e',
   isBlocked: false,
+  assignee: null,
+  completedAt: null,
 };
 
 function render(variant: 'project' | 'sprint', data: CardData = card, lifted = false) {
@@ -45,6 +47,30 @@ describe('Card project tag', () => {
 
   it('has no tag on project board cards', () => {
     expect(render('project')).not.toContain('AXV');
+  });
+});
+
+describe('Card assignee and completion', () => {
+  it('mostra as iniciais do responsável', () => {
+    const html = render('project', { ...card, assignee: { name: 'Marcelo Ferro' } });
+    expect(html).toContain('>MF</span>');
+    expect(html).toContain('title="Marcelo Ferro"');
+    expect(html).toContain('Responsável: Marcelo Ferro');
+  });
+
+  it('não mostra nada para tarefa sem responsável', () => {
+    const html = render('project');
+    expect(html).not.toContain('Responsável');
+    expect(html).not.toContain('rounded-full bg-ax');
+  });
+
+  it('mostra Concluída em 12/11 para card em Feito', () => {
+    const html = render('project', { ...card, completedAt: new Date(2026, 10, 12, 15, 0).getTime() });
+    expect(html).toContain('Concluída em 12/11');
+  });
+
+  it('não mostra conclusão para card fora de Feito', () => {
+    expect(render('project')).not.toContain('Concluída');
   });
 });
 

@@ -1,7 +1,8 @@
 'use client';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Lock } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Lock } from 'lucide-react';
+import { formatDay, initials } from './card-format';
 import { ProjectTag } from './ProjectTag';
 import { useProjectPrivacy } from './ProjectPrivacyContext';
 
@@ -14,6 +15,8 @@ export type CardData = {
   projectAcronym?: string;
   projectColor?: string;
   isBlocked: boolean;
+  assignee: { name: string } | null;
+  completedAt: number | null;
 };
 
 type Props = {
@@ -32,12 +35,15 @@ export function Card({ card, variant = 'project', onClick, lifted = false }: Pro
   const dueDateFormatted = card.dueDate
     ? format(parseISO(card.dueDate), 'dd MMM', { locale: ptBR })
     : null;
-  const hasMeta = card.isBlocked || card.dueDate || card.labels.length > 0;
+  const completedOn = card.completedAt != null ? formatDay(card.completedAt) : null;
+  const hasMeta = card.isBlocked || card.dueDate || card.labels.length > 0 || completedOn;
 
   const ariaLabel = [
     `Card: ${card.title}`,
     showProjectTag ? `Projeto: ${card.projectAcronym}` : null,
     card.isBlocked ? 'Bloqueado' : null,
+    card.assignee ? `Responsável: ${card.assignee.name}` : null,
+    completedOn ? `Concluída em ${completedOn}` : null,
     dueDateFormatted ? `Prazo: ${dueDateFormatted}${isOverdue ? ' (atrasado)' : ''}` : null,
   ].filter(Boolean).join('. ');
 
@@ -71,6 +77,14 @@ export function Card({ card, variant = 'project', onClick, lifted = false }: Pro
           <p className="min-w-0 text-[13.5px] font-semibold leading-snug text-mt-heading break-words">
             {card.title}
           </p>
+          {card.assignee && (
+            <span
+              title={card.assignee.name}
+              className="ml-auto inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-ax-green-950 text-[10.5px] font-bold tracking-[0.02em] text-ax-greige-400"
+            >
+              {initials(card.assignee.name)}
+            </span>
+          )}
         </div>
 
         {hasMeta && (
@@ -79,6 +93,13 @@ export function Card({ card, variant = 'project', onClick, lifted = false }: Pro
               <span className="inline-flex items-center gap-1 rounded-full bg-mt-warning-soft px-2 py-0.5 text-mt-warning">
                 <Lock size={11} strokeWidth={2} aria-hidden="true" />
                 Bloqueado
+              </span>
+            )}
+
+            {completedOn && (
+              <span className="inline-flex items-center gap-1 text-mt-muted">
+                <CheckCircle2 size={12} strokeWidth={2} aria-hidden="true" />
+                Concluída em {completedOn}
               </span>
             )}
 

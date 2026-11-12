@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
-import { createCard, updateCard, moveCard, archiveCard, getCardById } from '@/lib/core/cards';
+import { createCard, updateCard, moveCard, archiveCard, getCardById, assignCard } from '@/lib/core/cards';
+import { listCardEvents } from '@/lib/core/events';
+import { MartrelloError } from '@/lib/errors';
 import { addLabelToCard, removeLabelFromCard } from '@/lib/core/labels';
 import { addDependency, removeDependency } from '@/lib/core/dependencies';
 
@@ -57,4 +59,33 @@ export async function removeDependencyAction(cardId: string, blockerCardId: stri
   const card = await getCardById(getDb(), actor, cardId);
   revalidatePath(`/project/${card.projectId}`);
   revalidatePath('/sprint');
+}
+
+export type ActionResult = { ok: true } | { error: string };
+
+/** Core errors travel to the client as a message: a thrown error would be masked in production. */
+function toResult(e: unknown): { error: string } {
+  if (e instanceof MartrelloError) return { error: e.originalMessage };
+  throw e;
+}
+
+export async function assignCardAction(cardId: string, assignee: string | null): Promise<ActionResult> {
+  const { actor } = await requireActor();
+  try {
+    const card = await assignCard(getDb(), actor, cardId, assignee);
+    revalidatePath(`/project/${card.projectId}`);
+    revalidatePath('/sprint');
+    return { ok: true };
+  } catch (e) {
+    return toResult(e);
+  }
+}
+
+export async function getCardHistoryAction(cardId: string) {
+  const { actor } = await requireActor();
+  try {
+    return { ok: true as const, history: await listCardEvents(getDb(), actor, cardId) };
+  } catch (e) {
+    return toResult(e);
+  }
 }

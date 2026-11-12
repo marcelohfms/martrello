@@ -5,8 +5,11 @@ import useSWR from 'swr';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Archive, Check, X } from 'lucide-react';
-import { updateCardAction, toggleLabelAction, archiveCardAction, addDependencyAction, removeDependencyAction } from '@/app/actions';
+import { updateCardAction, toggleLabelAction, archiveCardAction, addDependencyAction, removeDependencyAction, assignCardAction } from '@/app/actions';
 import { DeadlinePicker } from './DeadlinePicker';
+import { AssigneePicker, type Member } from './AssigneePicker';
+import { CardHistory } from './CardHistory';
+import type { HistoryEvent } from './card-format';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -34,6 +37,7 @@ export function CardPanel({ cardId, onClose }: Props) {
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [depError, setDepError] = useState<string | null>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -71,12 +75,26 @@ export function CardPanel({ cardId, onClose }: Props) {
     dueDate: string | null;
     labels: Array<{ name: string; color: string }>;
     dependsOn: Array<{ id: string; title: string; isDone: boolean }>;
+    stage: string;
+    assignee: { name: string; email: string } | null;
   };
   const allLabels = data.allLabels as Array<{ name: string; color: string }>;
   const presentNames = new Set(card.labels.map((l) => l.name));
   const dependsOn = card.dependsOn as Array<{ id: string; title: string; isDone: boolean }>;
   const candidateCards = (data.candidateCards ?? []) as Array<{ id: string; title: string }>;
   const linkedIds = new Set(dependsOn.map((d) => d.id));
+  const members = (data.members ?? []) as Member[];
+  const history = (data.history ?? []) as Array<HistoryEvent & { id: string }>;
+  const nameByEmail = Object.fromEntries(members.map((m) => [m.email, m.name]));
+
+  function assign(next: string | null) {
+    setAssignError(null);
+    start(async () => {
+      const res = await assignCardAction(card.id, next);
+      if ('error' in res) setAssignError(res.error);
+      mutate();
+    });
+  }
 
   function saveTitle() {
     if (titleDraft == null || titleDraft === card.title) { setTitleDraft(null); return; }
@@ -142,6 +160,18 @@ export function CardPanel({ cardId, onClose }: Props) {
               )}
             </button>
           )}
+        </section>
+
+        <section>
+          <SectionLabel>Responsável</SectionLabel>
+          <AssigneePicker
+            members={members}
+            value={card.assignee?.email ?? null}
+            allowNone={card.stage === 'backlog'}
+            disabled={pending}
+            onChange={assign}
+          />
+          {assignError && <p role="alert" className="mt-1.5 text-[13px] text-mt-danger">{assignError}</p>}
         </section>
 
         <section>
@@ -243,6 +273,11 @@ export function CardPanel({ cardId, onClose }: Props) {
               ))}
           </select>
           {depError && <p role="alert" className="mt-1.5 text-[13px] text-mt-danger">{depError}</p>}
+        </section>
+
+        <section>
+          <SectionLabel>Histórico</SectionLabel>
+          <CardHistory events={history} nameByEmail={nameByEmail} />
         </section>
       </div>
 

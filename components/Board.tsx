@@ -9,6 +9,8 @@ export type Column = {
   id: string;
   title: string;
   cards: CardData[];
+  /** Feito is ordered by completion date, so its cards cannot be reordered by hand. */
+  ordered?: boolean;
   quickCreate?: { projectId: string; listId: string };
 };
 
@@ -61,6 +63,8 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
     if (variant === 'sprint' && toColId === fromCol.id) return;
 
     const toCol = cols.find((c) => c.id === toColId)!;
+    // Feito is ordered by completion date: no manual reordering inside it.
+    if (toCol.ordered && toCol.id === fromCol.id) return;
 
     setCols((prev) => {
       const next = prev.map((c) => ({ ...c, cards: [...c.cards] }));
@@ -68,7 +72,10 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
       const to = next.find((c) => c.id === toColId)!;
       const idx = from.cards.findIndex((c) => c.id === active.id);
       const [card] = from.cards.splice(idx, 1);
-      const insertAt = beforeCardId
+      // A card entering Feito was just completed, so it goes on top.
+      const insertAt = to.ordered
+        ? 0
+        : beforeCardId
         ? to.cards.findIndex((c) => c.id === beforeCardId)
         : to.cards.length;
       to.cards.splice(insertAt < 0 ? to.cards.length : insertAt, 0, card);
@@ -78,6 +85,8 @@ export function Board({ columns, variant = 'project', onCardClick }: Props) {
     if (variant === 'sprint') {
       // Sprint columns are stage keys (todo/doing/done): the card moves to that stage's list
       // in its own project.
+      moveCardAction(String(active.id), toColId);
+    } else if (toCol.ordered) {
       moveCardAction(String(active.id), toColId);
     } else {
       const position = (toCol.cards.findIndex((c) => c.id === beforeCardId) + 1) * 1000;

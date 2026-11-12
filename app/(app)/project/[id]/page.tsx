@@ -3,8 +3,8 @@ import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
 import { getProject } from '@/lib/core/projects';
 import { getBlockedStatuses } from '@/lib/core/dependencies';
-import { cards as cardsTbl, labels as labelsTbl, cardLabels } from '@/lib/db/schema';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { cards as cardsTbl, labels as labelsTbl, cardLabels, users } from '@/lib/db/schema';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { BoardClient } from './BoardClient';
 import type { Column } from '@/components/Board';
 import type { CardData } from '@/components/Card';
@@ -38,22 +38,37 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     labelsByCard.get(r.cardId)!.push({ name: r.name, color: r.color });
   }
 
+  const assigneeIds = [...new Set(cardRows.flatMap((c) => (c.assigneeId ? [c.assigneeId] : [])))];
+  const assigneeRows = assigneeIds.length
+    ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, assigneeIds))
+    : [];
+  const assigneeName = new Map(assigneeRows.map((u) => [u.id, u.name]));
+
   const statuses = await getBlockedStatuses(db, cardRows.map((c) => c.id));
 
   const totalCards = cardRows.length;
 
-  const columns: Column[] = project.lists.map((list) => ({
-    id: list.id,
-    title: list.name,
-    cards: cardRows.filter((c) => c.listId === list.id).map<CardData>((c) => ({
-      id: c.id,
-      title: c.title,
-      dueDate: c.dueDate,
-      labels: labelsByCard.get(c.id) ?? [],
-      isBlocked: statuses.get(c.id)?.isBlocked ?? false,
-    })),
-    quickCreate: { projectId: project.id, listId: list.id },
-  }));
+  const columns: Column[] = project.lists.map((list) => {
+    const isDone = list.stage === 'done';
+    const listCards = cardRows.filter((c) => c.listId === list.id);
+    // Feito shows the latest completions first; the other stages keep their manual order.
+    if (isDone) listCards.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
+    return {
+      id: list.id,
+      title: list.name,
+      ordered: isDone,
+      cards: listCards.map<CardData>((c) => ({
+        id: c.id,
+        title: c.title,
+        dueDate: c.dueDate,
+        labels: labelsByCard.get(c.id) ?? [],
+        isBlocked: statuses.get(c.id)?.isBlocked ?? false,
+        assignee: c.assigneeId && assigneeName.has(c.assigneeId) ? { name: assigneeName.get(c.assigneeId)! } : null,
+        completedAt: isDone ? c.completedAt : null,
+      })),
+      quickCreate: isDone ? undefined : { projectId: project.id, listId: list.id },
+    };
+  });
 
   return (
     <div className="h-dvh flex flex-col bg-mt-bg">
