@@ -1,7 +1,7 @@
 // lib/core/cards.ts
 import { and, desc, eq, inArray, max, isNull, or, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
-import { cards, lists, cardLabels, labels, sprintSlots, users, type Card, type Label, type List, type Stage } from '@/lib/db/schema';
+import { cards, cardDependencies, lists, cardLabels, labels, sprintSlots, users, type Card, type Label, type List, type Stage } from '@/lib/db/schema';
 import { MartrelloError } from '@/lib/errors';
 import { actorUserId, type Actor } from '@/lib/access/actor';
 import { loadVisibleCard, visibleProjectIds } from '@/lib/access/guard';
@@ -227,6 +227,17 @@ export async function moveCard(
     tx.update(sprintSlots).set({ position }).where(eq(sprintSlots.cardId, id)).run();
 
     if (projectChanged) {
+      // Dependencies never cross projects: drop them all, in both directions.
+      const deps = tx.select().from(cardDependencies)
+        .where(or(eq(cardDependencies.blockedCardId, id), eq(cardDependencies.blockerCardId, id))).all();
+      for (const d of deps) {
+        recordCardEvent(tx, { cardId: d.blockedCardId, actor, type: 'dependency_removed', from: d.blockerCardId, at: now });
+        recordCardEvent(tx, { cardId: d.blockerCardId, actor, type: 'dependency_removed', from: d.blockedCardId, at: now });
+      }
+      if (deps.length > 0) {
+        tx.delete(cardDependencies)
+          .where(or(eq(cardDependencies.blockedCardId, id), eq(cardDependencies.blockerCardId, id))).run();
+      }
       recordCardEvent(tx, { cardId: id, actor, type: 'project', from: card.projectId, to: targetProjectId, at: now });
     }
     if (fromList.stage !== toList.stage) {
@@ -296,7 +307,6 @@ export async function searchCards(
   opts: {
     query: string;
     project?: string;
-    label?: string;
     includeArchived?: boolean;
     assignee?: string | 'me';
   },
@@ -313,19 +323,23 @@ export async function searchCards(
     const visible = await visibleProjectIds(db, actor);
     if (visible !== null) where.push(inArray(cards.projectId, visible));
   }
-  if (opts.assignee) {
-    const ref = opts.assignee.trim();
+  const ref = opts.assignee?.trim();
+  if (ref) {
     if (ref === 'me') {
       const me = actorUserId(actor);
       if (!me) throw new MartrelloError('INVALID_INPUT', "'me' exige um usuário autenticado");
       where.push(eq(cards.assigneeId, me));
     } else {
       const matches = await db
-        .select({ id: users.id })
+        .select({ id: users.id, email: users.email })
         .from(users)
         .where(or(eq(users.id, ref), eq(users.email, ref.toLowerCase()), eq(users.name, ref)));
       if (matches.length === 0) return [];
-      where.push(inArray(cards.assigneeId, matches.map((m) => m.id)));
+      const exact = matches.find((u) => u.id === ref || u.email === ref.toLowerCase());
+      if (!exact && matches.length > 1) {
+        throw new MartrelloError('INVALID_INPUT', `Mais de um membro com o nome '${ref}'. Use o e-mail.`);
+      }
+      where.push(eq(cards.assigneeId, (exact ?? matches[0]).id));
     }
   }
   return db.select().from(cards).where(and(...where)).orderBy(desc(cards.updatedAt));

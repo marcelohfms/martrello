@@ -19,13 +19,6 @@ export async function visibleProjectIds(db: Db, a: Actor): Promise<string[] | nu
   return rows.map((r) => r.projectId);
 }
 
-export async function assertProjectVisible(db: Db, a: Actor, projectId: string): Promise<void> {
-  const ids = await visibleProjectIds(db, a);
-  if (ids !== null && !ids.includes(projectId)) {
-    throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto '${projectId}' não existe`);
-  }
-}
-
 export async function loadVisibleCard(db: Db, a: Actor, cardId: string): Promise<Card> {
   const card = (await db.select().from(cards).where(eq(cards.id, cardId)).limit(1))[0];
   const notFound = () => new MartrelloError('CARD_NOT_FOUND', `Card '${cardId}' não encontrado`);

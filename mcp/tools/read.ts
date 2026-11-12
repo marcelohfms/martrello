@@ -41,14 +41,13 @@ export const readTools: MartrelloTool[] = [
   {
     definition: {
       name: 'martrello_search_cards',
-      description: 'Busca cards por substring no título. Filtros opcionais por projeto e label.',
+      description: 'Busca cards por substring no título. Filtros opcionais por projeto e responsável.',
       inputSchema: {
         type: 'object',
         required: ['query'],
         properties: {
           query: { type: 'string' },
           project: { type: 'string' },
-          label: { type: 'string' },
           include_archived: { type: 'boolean', default: false },
           assignee: { type: 'string', description: "e-mail, nome, id ou 'me'" },
         },
@@ -57,7 +56,6 @@ export const readTools: MartrelloTool[] = [
     handler: async (input, { actor }) => searchCards(getDb(), actor, {
       query: String(input.query),
       project: input.project as string | undefined,
-      label: input.label as string | undefined,
       includeArchived: Boolean(input.include_archived),
       assignee: input.assignee as string | undefined,
     }),

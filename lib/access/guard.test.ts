@@ -5,7 +5,6 @@ import { SYSTEM_ACTOR, actorUserId, toActor } from './actor';
 import {
   seesAllProjects,
   visibleProjectIds,
-  assertProjectVisible,
   loadVisibleCard,
   assertAdmin,
 } from './guard';
@@ -49,8 +48,6 @@ describe('access guard', () => {
     const { user, actor } = await makeUser(db);
     addMemberRow(db, 'p1', user.id);
     expect(await visibleProjectIds(db, actor)).toEqual(['p1']);
-    await expect(assertProjectVisible(db, actor, 'p2')).rejects.toMatchObject({ code: 'PROJECT_NOT_FOUND' });
-    await expect(assertProjectVisible(db, actor, 'p1')).resolves.toBeUndefined();
   });
 
   it('admin e sistema veem tudo', async () => {
@@ -61,7 +58,6 @@ describe('access guard', () => {
     expect(await visibleProjectIds(db, SYSTEM_ACTOR)).toBeNull();
     expect(seesAllProjects(admin)).toBe(true);
     expect(seesAllProjects(SYSTEM_ACTOR)).toBe(true);
-    await expect(assertProjectVisible(db, admin, 'p1')).resolves.toBeUndefined();
     expect((await loadVisibleCard(db, SYSTEM_ACTOR, 'c-p1')).id).toBe('c-p1');
   });
 
