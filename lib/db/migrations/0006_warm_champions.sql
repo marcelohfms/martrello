@@ -64,9 +64,23 @@ END;--> statement-breakpoint
 CREATE TABLE `_stage_guard` (`x` text NOT NULL);--> statement-breakpoint
 INSERT INTO `_stage_guard` SELECT NULL FROM `lists` WHERE `stage` IS NULL;--> statement-breakpoint
 DROP TABLE `_stage_guard`;--> statement-breakpoint
+-- Guard: data exists but the admin user is missing -> abort instead of leaving NULL owners.
+CREATE TABLE `_admin_guard` (`x` text NOT NULL);--> statement-breakpoint
+INSERT INTO `_admin_guard` SELECT NULL
+  WHERE NOT EXISTS (SELECT 1 FROM `users` WHERE `email` = 'marcelo.ferro@axivero.com.br')
+    AND (EXISTS (SELECT 1 FROM `projects`) OR EXISTS (SELECT 1 FROM `cards`) OR EXISTS (SELECT 1 FROM `sprints`));--> statement-breakpoint
+DROP TABLE `_admin_guard`;--> statement-breakpoint
+-- Ensure every project has all four stages (the old build allowed deleting/renaming lists).
 INSERT INTO `lists` (`id`, `project_id`, `name`, `stage`, `position`, `created_at`)
-  SELECT lower(hex(randomblob(16))), `id`, 'Backlog', 'backlog', 0, CAST(strftime('%s','now') AS INTEGER) * 1000
-  FROM `projects`;--> statement-breakpoint
+  SELECT lower(hex(randomblob(16))), p.`id`, s.`name`, s.`stage`, s.`position`, CAST(strftime('%s','now') AS INTEGER) * 1000
+  FROM `projects` p
+  CROSS JOIN (
+    SELECT 'Backlog' AS `name`, 'backlog' AS `stage`, 0 AS `position`
+    UNION ALL SELECT 'A fazer', 'todo', 1000
+    UNION ALL SELECT 'Fazendo', 'doing', 2000
+    UNION ALL SELECT 'Feito', 'done', 3000
+  ) s
+  WHERE NOT EXISTS (SELECT 1 FROM `lists` l WHERE l.`project_id` = p.`id` AND l.`stage` = s.`stage`);--> statement-breakpoint
 CREATE UNIQUE INDEX `lists_project_stage_unique` ON `lists` (`project_id`,`stage`);--> statement-breakpoint
 UPDATE `cards` SET `assignee_id` = (SELECT `id` FROM `users` WHERE `email` = 'marcelo.ferro@axivero.com.br');--> statement-breakpoint
 UPDATE `cards` SET `completed_at` = `updated_at` WHERE `list_id` IN (SELECT `id` FROM `lists` WHERE `stage` = 'done');--> statement-breakpoint
