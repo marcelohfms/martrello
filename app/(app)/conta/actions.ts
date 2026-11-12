@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db/client';
 import { requireActor } from '@/lib/auth/current-user';
 import { createMcpToken, revokeMcpToken } from '@/lib/auth/mcp-tokens';
-import { authenticate, setUserPassword } from '@/lib/auth/users';
+import { setUserPassword } from '@/lib/auth/users';
+import { verifyCurrentPassword } from '@/lib/auth/password-check';
+import { loginLimiter } from '@/lib/auth/rate-limit';
 import { createSession } from '@/lib/auth/sessions';
 import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie';
 import { validateTokenName, validatePasswordChange } from '@/lib/auth/admin-input';
@@ -45,10 +47,15 @@ export async function changePasswordAction(
   if ('error' in v) return v;
   try {
     const db = getDb();
-    if (!(await authenticate(db, user.email, current))) return { error: 'Senha atual incorreta.' };
+    const check = await verifyCurrentPassword(db, loginLimiter, user.id, user.email, current);
+    if (!check.ok) return { error: check.error };
     await setUserPassword(db, user.id, next); // ends every session of the user, including this one
-    const { token, expiresAt } = await createSession(db, user.id);
-    (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions(expiresAt));
+    try {
+      const { token, expiresAt } = await createSession(db, user.id);
+      (await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions(expiresAt));
+    } catch {
+      return { error: 'Senha alterada. Entre de novo com a senha nova.' };
+    }
     revalidatePath('/conta');
     return { ok: true };
   } catch (e) {

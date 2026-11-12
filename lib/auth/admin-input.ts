@@ -17,10 +17,11 @@ export function validateTokenName(raw: string): { ok: true; name: string } | { e
 }
 
 export function validatePasswordChange(
-  _current: string,
+  current: string,
   next: string,
   confirm: string,
 ): { ok: true } | { error: string } {
+  if (!current) return { error: 'Informe a senha atual.' };
   if (next !== confirm) return { error: 'As senhas não conferem.' };
   return { ok: true };
 }

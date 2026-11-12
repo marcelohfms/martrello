@@ -39,7 +39,10 @@ describe('validateTokenName', () => {
 });
 
 describe('validatePasswordChange', () => {
-  it('rejects mismatch', () => {
+  it('rejects an empty current password', () => {
+    expect(validatePasswordChange('', 'bbbb', 'bbbb')).toEqual({ error: 'Informe a senha atual.' });
+  });
+  it('rejects mismatch between new and confirmation', () => {
     expect(validatePasswordChange('a', 'b', 'c')).toEqual({ error: 'As senhas não conferem.' });
   });
   it('accepts matching', () => {

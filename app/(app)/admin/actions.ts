@@ -6,26 +6,13 @@ import { requireAdmin } from '@/lib/auth/current-user';
 import { createInvite, resendInvite, cancelInvite, listPendingInvites } from '@/lib/auth/tokens';
 import { deactivateUser, reactivateUser } from '@/lib/auth/admin-users';
 import { addMember, removeMember } from '@/lib/core/members';
-import { sendEmail, appUrl } from '@/lib/email/mailer';
-import { inviteEmail } from '@/lib/email/templates';
+import { appUrl } from '@/lib/email/mailer';
+import { deliverInvite, type InviteResult } from '@/lib/auth/invite-delivery';
 import { validateInviteInput } from '@/lib/auth/admin-input';
 import { toResult } from '@/lib/action-result';
 
 export type AdminResult = { ok: true } | { error: string };
-export type InviteResult = { ok: true; link?: string; warning?: string } | { error: string };
-
-const SEND_WARNING = 'Não foi possível enviar o e-mail. Copie o link e envie para a pessoa.';
-
-/** Emails the invite; without a mail provider (or when sending fails) the link is handed back to be copied. */
-async function deliverInvite(email: string, name: string, token: string): Promise<InviteResult> {
-  const link = appUrl('/convite/' + token);
-  try {
-    const status = await sendEmail({ to: email, ...inviteEmail({ name, link }) });
-    return status === 'disabled' ? { ok: true, link } : { ok: true };
-  } catch {
-    return { ok: true, link, warning: SEND_WARNING };
-  }
-}
+export type { InviteResult };
 
 export async function inviteAction(input: { email: string; name: string }): Promise<InviteResult> {
   const { actor } = await requireAdmin();
