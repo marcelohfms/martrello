@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { ulid } from 'ulidx';
-import { projects, lists, cards, type Project, type List } from '@/lib/db/schema';
+import { projects, lists, cards, projectMembers, type Project, type List } from '@/lib/db/schema';
 import { MartrelloError, suggestClosest } from '@/lib/errors';
 import { POSITION_STEP, renumber } from './positions';
 import type { Db } from './test-helpers';
@@ -57,6 +57,10 @@ export async function createProject(
         position: POSITION_STEP * i,
         createdAt: now,
       }).run();
+    }
+    // The creating admin is always a member; a system actor has no user to add.
+    if (actor.kind === 'user') {
+      tx.insert(projectMembers).values({ projectId: id, userId: actor.id, addedAt: now }).run();
     }
   });
 
