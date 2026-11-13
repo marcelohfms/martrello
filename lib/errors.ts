@@ -17,7 +17,8 @@ export type ErrorCode =
   | 'TOKEN_INVALID'
   | 'ASSIGNEE_REQUIRED'
   | 'ASSIGNEE_NOT_MEMBER'
-  | 'LISTS_ARE_FIXED';
+  | 'LISTS_ARE_FIXED'
+  | 'SLACK_NO_CHANNEL';
 
 export class MartrelloError extends Error {
   public readonly originalMessage: string;

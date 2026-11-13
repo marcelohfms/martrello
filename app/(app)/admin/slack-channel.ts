@@ -1,5 +1,6 @@
 import type { ProjectDeliveryStatus } from '@/lib/core/slack-deliveries';
 import { saoPauloClock } from '@/lib/core/week';
+import type { TestSendResult } from '@/lib/slack/test-send';
 
 export type SlackChannel = { id: string; name: string };
 export type SlackSetup =
@@ -67,4 +68,10 @@ export function formatDeliveryStatus(s: ProjectDeliveryStatus | undefined, now: 
       if (closed) return `Erro em ${when}: envio interrompido${last}`;
       return `Enviando em ${when}…`;
   }
+}
+
+export function testSendMessage(r: TestSendResult): string {
+  return r.result === 'sent'
+    ? `Mensagem de teste enviada para #${r.channelName}.`
+    : `Nada atrasado nem vencendo hoje: nenhuma mensagem enviada para #${r.channelName}.`;
 }

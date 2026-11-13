@@ -10,6 +10,10 @@ import { setProjectSlackChannel } from '@/lib/core/projects';
 import { deliverInvite, inviteLink, inviteLinkPreflight, type InviteResult } from '@/lib/auth/invite-delivery';
 import { validateInviteInput } from '@/lib/auth/admin-input';
 import { toResult, type ActionResult } from '@/lib/action-result';
+import { createSlackClient, SlackError } from '@/lib/slack/client';
+import { sendTestDigest } from '@/lib/slack/test-send';
+import { appUrl } from '@/lib/email/mailer';
+import { slackReason, testSendMessage } from './slack-channel';
 
 type AdminResult = ActionResult;
 
@@ -84,4 +88,21 @@ export async function setSlackChannelAction(
   channel: { id: string; name: string } | null,
 ): Promise<AdminResult> {
   return run((actor) => setProjectSlackChannel(getDb(), actor, projectId, channel));
+}
+
+/** Sends today's message to the project's channel now, outside the 9h–12h window, without counting as the day's send. */
+export async function sendSlackTestAction(projectId: string): Promise<{ ok: true; message: string } | { error: string }> {
+  const { actor } = await requireAdmin();
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) return { error: 'Slack não configurado.' };
+  try {
+    const r = await sendTestDigest(getDb(), actor, projectId, new Date(), {
+      slack: createSlackClient(token),
+      boardUrl: (id) => appUrl(`/project/${id}`),
+    });
+    return { ok: true, message: testSendMessage(r) };
+  } catch (e) {
+    if (e instanceof SlackError) return { error: `Erro do Slack: ${slackReason(e.code)}` };
+    return toResult(e);
+  }
 }
