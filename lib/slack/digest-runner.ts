@@ -12,6 +12,47 @@ import { listDueCards } from '@/lib/core/due-cards';
 import { buildDigest, isEmptyDigest, renderDigest } from '@/lib/core/due-digest';
 import { SlackError, type SlackClient } from './client';
 
+/** Resolves e-mails to Slack user ids, once per e-mail; a failed lookup is logged and yields null. */
+export function mentionResolver(slack: SlackClient, log: (msg: string) => void): (email: string) => Promise<string | null> {
+  const slackIds = new Map<string, string | null>();
+  return async (email) => {
+    if (slackIds.has(email)) return slackIds.get(email) ?? null;
+    let id: string | null = null;
+    try {
+      id = await slack.lookupUserIdByEmail(email);
+    } catch (e) {
+      log(`[slack] busca de usuário falhou (${e instanceof SlackError ? e.code : (e as Error).message})`);
+    }
+    slackIds.set(email, id);
+    return id;
+  };
+}
+
+/** The message a project gets on `date` (São Paulo), or null when there is nothing to announce. */
+export async function composeDigestText(
+  db: Db,
+  project: { id: string; name: string },
+  date: string,
+  resolveId: (email: string) => Promise<string | null>,
+  boardUrl: (projectId: string) => string,
+): Promise<string | null> {
+  const cards = await listDueCards(db, project.id);
+  const digest = buildDigest(cards, date, isFirstBusinessDayOfWeek(date));
+  if (isEmptyDigest(digest)) return null;
+  const slackIdByEmail = new Map<string, string>();
+  const emails = new Set(
+    [digest.overdue, digest.today, digest.week]
+      .flat()
+      .map((c) => c.assigneeEmail)
+      .filter((e): e is string => !!e),
+  );
+  for (const email of emails) {
+    const id = await resolveId(email);
+    if (id) slackIdByEmail.set(email, id);
+  }
+  return renderDigest(digest, { projectName: project.name, today: date, boardUrl: boardUrl(project.id), slackIdByEmail });
+}
+
 export type DigestTickResult = { sent: number; empty: number; failed: number; retry: number };
 
 export async function runDigestTick(
@@ -29,18 +70,7 @@ export async function runDigestTick(
   const stale = failStaleSending(db, date, ts);
   if (stale > 0) log(`[slack] envio interrompido em ${stale} projeto(s)`);
 
-  const slackIds = new Map<string, string | null>();
-  const resolveId = async (email: string): Promise<string | null> => {
-    if (slackIds.has(email)) return slackIds.get(email) ?? null;
-    let id: string | null = null;
-    try {
-      id = await slack.lookupUserIdByEmail(email);
-    } catch (e) {
-      log(`[slack] busca de usuário falhou (${e instanceof SlackError ? e.code : (e as Error).message})`);
-    }
-    slackIds.set(email, id);
-    return id;
-  };
+  const resolveId = mentionResolver(slack, log);
 
   for (const target of await listDigestTargets(db)) {
     try {
@@ -57,28 +87,10 @@ export async function runDigestTick(
     let status: 'sent' | 'empty' | 'retry' | 'failed';
     let code: string | null = null;
     try {
-      const cards = await listDueCards(db, target.id);
-      const digest = buildDigest(cards, date, isFirstBusinessDayOfWeek(date));
-      if (isEmptyDigest(digest)) {
+      const text = await composeDigestText(db, target, date, resolveId, boardUrl);
+      if (text === null) {
         status = 'empty';
       } else {
-        const slackIdByEmail = new Map<string, string>();
-        const emails = new Set(
-          [digest.overdue, digest.today, digest.week]
-            .flat()
-            .map((c) => c.assigneeEmail)
-            .filter((e): e is string => !!e),
-        );
-        for (const email of emails) {
-          const id = await resolveId(email);
-          if (id) slackIdByEmail.set(email, id);
-        }
-        const text = renderDigest(digest, {
-          projectName: target.name,
-          today: date,
-          boardUrl: boardUrl(target.id),
-          slackIdByEmail,
-        });
         await slack.postMessage(target.channelId, text);
         status = 'sent';
       }

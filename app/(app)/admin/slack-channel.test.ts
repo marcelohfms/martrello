@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { channelOptions, formatDeliveryStatus, slackReason } from './slack-channel';
+import { channelOptions, formatDeliveryStatus, slackReason, testSendMessage } from './slack-channel';
 
 const now = new Date('2026-11-16T13:00:00Z'); // 10h00 em SP
 const at = Date.parse('2026-11-16T12:03:00Z'); // 9h03 em SP
@@ -108,5 +108,16 @@ describe('formatDeliveryStatus', () => {
         'Erro em 15/11 9h03: envio interrompido · último envio 13/11 9h02',
       );
     });
+  });
+});
+
+describe('testSendMessage', () => {
+  it('enviado', () => {
+    expect(testSendMessage({ result: 'sent', channelName: 'tgs' })).toBe('Mensagem de teste enviada para #tgs.');
+  });
+  it('nada a avisar', () => {
+    expect(testSendMessage({ result: 'empty', channelName: 'tgs' })).toBe(
+      'Nada atrasado nem vencendo hoje: nenhuma mensagem enviada para #tgs.',
+    );
   });
 });
