@@ -175,12 +175,14 @@ Uma tarefa atrasada aparece todo dia até alguém mudar o prazo ou concluí-la.
   arquivados, paginado).
 - Sem `SLACK_BOT_TOKEN` o verificador nem inicia, e nada quebra.
 - *Decisão do Claude:* o verificador só inicia em produção
-  (`NODE_ENV=production`) com `SLACK_BOT_TOKEN`. A tabela de envios mora no
+  (`NODE_ENV=production`) com `SLACK_BOT_TOKEN` e `SLACK_DIGEST_ENABLED=1`
+  (opt-in explícito, porque `next start` também é produção e carrega
+  `.env.local`). A tabela de envios mora no
   mesmo SQLite, então uma cópia do banco de produção rodando local com o token
   mandaria de novo nos canais reais. Em desenvolvimento, o token só serve para
   o seletor do admin; os envios são testados com cliente e relógio falsos.
-  `docs/deploy.md` avisa que `SLACK_BOT_TOKEN` com `NODE_ENV=production` só
-  deve existir na VPS.
+  `docs/deploy.md` avisa que `SLACK_DIGEST_ENABLED` só deve existir no
+  Easypanel.
 - `docs/deploy.md` ganha o passo a passo para criar o app (de preferência
   com um manifesto pronto para colar), instalar no workspace, copiar o token e
   convidar o bot nos canais.

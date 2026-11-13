@@ -90,4 +90,12 @@ describe('createSlackClient', () => {
     expect(p1.has('cursor')).toBe(false);
     expect(new URLSearchParams(String(f.mock.calls[1][1].body)).get('cursor')).toBe('abc');
   });
+
+  it('listBotChannels para após 20 páginas', async () => {
+    const f = vi.fn().mockImplementation(async () =>
+      json({ ok: true, channels: [], response_metadata: { next_cursor: 'sempre' } }),
+    );
+    await createSlackClient('t', f as unknown as typeof fetch).listBotChannels();
+    expect(f).toHaveBeenCalledTimes(20);
+  });
 });

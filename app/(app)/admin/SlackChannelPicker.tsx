@@ -2,7 +2,7 @@
 import type { TransitionStartFunction } from 'react';
 import type { ActionResult } from '@/lib/action-result';
 import { setSlackChannelAction } from './actions';
-import { channelOptions, type SlackSetup } from './slack-channel';
+import { channelOptions, slackReason, type SlackSetup } from './slack-channel';
 
 type Props = {
   projectId: string;
@@ -21,8 +21,9 @@ export function SlackChannelPicker({ projectId, setup, saved, status, disabled, 
   if (setup.state === 'error') {
     return (
       <div className="flex flex-col gap-1 text-[13px]">
-        <p className="text-mt-danger">Não foi possível listar os canais do Slack: {setup.message}</p>
+        <p className="text-mt-danger">Não foi possível listar os canais do Slack: {slackReason(setup.message)}</p>
         {saved && <p className="text-mt-muted">Canal salvo: #{saved.name}</p>}
+        <p className="text-[12px] text-mt-muted">{status}</p>
       </div>
     );
   }

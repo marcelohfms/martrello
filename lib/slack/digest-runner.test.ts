@@ -181,7 +181,7 @@ describe('runDigestTick', () => {
     const b = await projectWithChannel(db, 'beta');
     await createCard(db, SYSTEM_ACTOR, { project: a.id, title: 'ta', dueDate: '2026-11-01' });
     await createCard(db, SYSTEM_ACTOR, { project: b.id, title: 'tb', dueDate: '2026-11-01' });
-    // Linha pré-existente 'sent' não derruba nada; forçamos a falha no 1º finishDelivery via trigger.
+    // Sem linha 'sent' pré-existente: o trigger aborta o UPDATE para 'sent' do projeto A (falha no 1º finishDelivery).
     db.$client.exec(
       `CREATE TRIGGER boom BEFORE UPDATE ON slack_deliveries WHEN NEW.status = 'sent' AND NEW.project_id = '${a.id}' BEGIN SELECT RAISE(ABORT, 'db-boom'); END`,
     );

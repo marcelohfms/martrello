@@ -69,7 +69,8 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 | `MCP_TOKEN` | Token do MCP anterior. Continua aceito e age como o admin. |
 | `BACKUP_DIR`, `BACKUP_KEEP` | Pasta e quantidade de backups (ver Backups). |
 | `DATABASE_URL` | Caminho do SQLite (padrão da imagem). |
-| `SLACK_BOT_TOKEN` | Bot User OAuth Token do app do Slack (`xoxb-…`). Só na VPS. Sem ele o bot do Slack fica desligado. Não use com `NODE_ENV=production` fora da VPS: uma cópia do banco mandaria de novo as mensagens nos canais reais. |
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token do app do Slack (`xoxb-…`). Sem ele o bot do Slack fica desligado. Localmente o token só serve ao seletor de canal do `/admin`; o envio diário depende de `SLACK_DIGEST_ENABLED`. Nunca coloque `SLACK_DIGEST_ENABLED` no `.env.local`: `pnpm start` e a imagem Docker contam como produção, e uma cópia do banco mandaria de novo as mensagens nos canais reais. |
+| `SLACK_DIGEST_ENABLED` | Defina `1` só no Easypanel. Sem ela o bot não envia, mesmo com token. Nunca defina localmente. |
 
 ### Verificação do domínio na Resend
 
@@ -105,9 +106,10 @@ projeto, as tarefas atrasadas e as que vencem.
 
 2. Instale o app no workspace e copie o **Bot User OAuth Token**
    (OAuth & Permissions) para `SLACK_BOT_TOKEN` no serviço.
-3. Faça o deploy (ou reinicie o serviço).
-4. Em cada canal, rode `/invite @martrello`.
-5. Em `/admin`, escolha o canal de cada projeto.
+3. Defina `SLACK_DIGEST_ENABLED=1` no serviço (só no Easypanel).
+4. Faça o deploy (ou reinicie o serviço).
+5. Em cada canal, rode `/invite @martrello`.
+6. Em `/admin`, escolha o canal de cada projeto.
 
 ## Convites e senhas
 

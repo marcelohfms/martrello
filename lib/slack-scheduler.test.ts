@@ -18,17 +18,24 @@ afterEach(() => {
 function enable() {
   vi.stubEnv('NODE_ENV', 'production');
   vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-test');
+  vi.stubEnv('SLACK_DIGEST_ENABLED', '1');
   vi.stubEnv('APP_URL', 'https://martrello.test');
 }
 
 describe('startSlackScheduler', () => {
-  it('não inicia fora de produção ou sem token', async () => {
+  it('não inicia fora de produção, sem token ou sem SLACK_DIGEST_ENABLED=1', async () => {
     vi.useFakeTimers();
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-test');
+    vi.stubEnv('SLACK_DIGEST_ENABLED', '1');
     startSlackScheduler();
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('SLACK_BOT_TOKEN', '');
+    startSlackScheduler();
+    vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-test');
+    vi.stubEnv('SLACK_DIGEST_ENABLED', '');
+    startSlackScheduler();
+    vi.stubEnv('SLACK_DIGEST_ENABLED', 'true');
     startSlackScheduler();
     await vi.advanceTimersByTimeAsync(30 * MIN);
     expect(runTick).not.toHaveBeenCalled();

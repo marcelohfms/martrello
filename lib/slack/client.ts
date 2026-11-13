@@ -23,7 +23,14 @@ type SlackResponse = {
   response_metadata?: { next_cursor?: string };
 };
 
-export function createSlackClient(token: string, fetchImpl: typeof fetch = fetch): SlackClient {
+const MAX_CHANNEL_PAGES = 20;
+
+export function createSlackClient(
+  token: string,
+  fetchImpl: typeof fetch = fetch,
+  opts: { timeoutMs?: number } = {},
+): SlackClient {
+  const timeoutMs = opts.timeoutMs ?? 10_000;
   async function call(method: string, contentType: string, body: string): Promise<SlackResponse> {
     let res: Response;
     try {
@@ -31,7 +38,7 @@ export function createSlackClient(token: string, fetchImpl: typeof fetch = fetch
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': contentType },
         body,
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) {
       const code = (e as { cause?: { code?: unknown } })?.cause?.code;
@@ -77,7 +84,7 @@ export function createSlackClient(token: string, fetchImpl: typeof fetch = fetch
     async listBotChannels() {
       const out: { id: string; name: string }[] = [];
       let cursor = '';
-      do {
+      for (let page = 0; page < MAX_CHANNEL_PAGES; page++) {
         const params: Record<string, string> = {
           types: 'public_channel,private_channel',
           exclude_archived: 'true',
@@ -87,7 +94,8 @@ export function createSlackClient(token: string, fetchImpl: typeof fetch = fetch
         const data = await form('users.conversations', params);
         for (const c of data.channels ?? []) out.push({ id: c.id, name: c.name });
         cursor = data.response_metadata?.next_cursor ?? '';
-      } while (cursor);
+        if (!cursor) break;
+      }
       return out.sort((a, b) => a.name.localeCompare(b.name));
     },
   };

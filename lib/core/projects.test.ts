@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { makeTestDb, type Db } from './test-helpers';
+import { makeTestDb, makeUser, type Db } from './test-helpers';
 import { SYSTEM_ACTOR } from '@/lib/access/actor';
-import { makeUser } from './test-helpers';
 import { createProject, setProjectSlackChannel, listProjects, updateProject, archiveProject, reorderProjects, getProjectByNameOrId, PROJECT_COLOR_PALETTE } from './projects';
 import { MartrelloError } from '@/lib/errors';
 

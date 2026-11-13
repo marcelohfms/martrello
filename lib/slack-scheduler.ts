@@ -7,11 +7,11 @@ const INTERVAL_MS = 15 * 60 * 1000;
 
 /**
  * Posts the daily due-tasks message to each project's Slack channel: a tick now,
- * then every 15 minutes. Only in production with SLACK_BOT_TOKEN set. Never throws.
+ * then every 15 minutes. Only in production with SLACK_BOT_TOKEN set and SLACK_DIGEST_ENABLED=1. Never throws.
  */
 export function startSlackScheduler(): void {
   const token = process.env.SLACK_BOT_TOKEN;
-  if (process.env.NODE_ENV !== 'production' || !token) return;
+  if (process.env.NODE_ENV !== 'production' || !token || process.env.SLACK_DIGEST_ENABLED !== '1') return;
 
   const slack = createSlackClient(token);
   const boardUrl = (id: string) => appUrl(`/project/${id}`);

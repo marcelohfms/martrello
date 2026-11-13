@@ -1,4 +1,5 @@
 import type { ProjectDeliveryStatus } from '@/lib/core/slack-deliveries';
+import { saoPauloClock } from '@/lib/core/week';
 
 export type SlackChannel = { id: string; name: string };
 export type SlackSetup =
@@ -26,6 +27,10 @@ const REASONS: Record<string, string> = {
   ambiguous: 'sem confirmação do Slack',
 };
 
+export function slackReason(code: string): string {
+  return REASONS[code] ?? code;
+}
+
 const TZ = 'America/Sao_Paulo';
 
 function stamp(ms: number): string {
@@ -42,22 +47,24 @@ function stamp(ms: number): string {
 }
 
 export function formatDeliveryStatus(s: ProjectDeliveryStatus | undefined, now: Date): string {
-  void now;
   if (!s || !s.latest) return 'Nenhum envio ainda';
   const { latest, lastSentAt } = s;
   const when = stamp(latest.at);
   const last = lastSentAt !== null ? ` · último envio ${stamp(lastSentAt)}` : '';
-  const reason = latest.error ? (REASONS[latest.error] ?? latest.error) : 'erro desconhecido';
+  const reason = latest.error ? slackReason(latest.error) : 'erro desconhecido';
+  const { date, hour } = saoPauloClock(now);
+  const closed = latest.day < date || (latest.day === date && hour >= 12);
   switch (latest.status) {
     case 'sent':
       return `Enviado em ${when}`;
     case 'empty':
       return `${when}: nada a avisar${last}`;
     case 'retry':
-      return `Erro em ${when}: ${reason} (tenta de novo até 12h)`;
+      return closed ? `Erro em ${when}: ${reason}${last}` : `Erro em ${when}: ${reason} (tenta de novo até 12h)`;
     case 'failed':
       return `Erro em ${when}: ${reason}${last}`;
     default:
+      if (closed) return `Erro em ${when}: envio interrompido${last}`;
       return `Enviando em ${when}…`;
   }
 }
