@@ -18,7 +18,7 @@ Sistema de gestão de tarefas da Axivero em que o Claude é quem mais escreve: c
 
 ## Positioning
 
-Um quadro de time pequeno, com acesso só por convite, projetos com membros e responsável por tarefa, operado principalmente por agentes através de MCP local e remoto. Sem papéis além de admin e membro, sem comentários nem notificações dentro do produto.
+Um quadro de time pequeno, com acesso só por convite, projetos com membros e responsável por tarefa, operado principalmente por agentes através de MCP local e remoto. Sem papéis além de admin e membro, sem comentários nem notificações dentro do produto (os avisos de prazo vão pelo Slack, fora do produto).
 
 ## Operating Context
 
@@ -26,7 +26,7 @@ Um quadro de time pequeno, com acesso só por convite, projetos com membros e re
 - Cada projeto tem o fluxo fixo Backlog, A fazer, Fazendo e Feito. O Backlog não exige responsável.
 - Os projetos aparecem por acrônimo (AXV, MTM, EIA…) por padrão. O botão de olho revela os nomes reais apenas na memória da página, para o quadro poder aparecer em tela compartilhada sem expor clientes. Recarregar a página volta a esconder.
 - Mudanças feitas pelo MCP chegam à interface em tempo real.
-- O login é por e-mail. O e-mail de login deve ser o mesmo e-mail Axivero da pessoa no Slack, porque o bot do Slack (projeto seguinte) vai usá-lo para identificá-la.
+- O login é por e-mail. O e-mail de login deve ser o mesmo e-mail Axivero da pessoa no Slack, porque o bot do Slack usa o e-mail para marcar a pessoa.
 
 ## Capabilities and Constraints
 

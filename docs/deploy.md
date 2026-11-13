@@ -69,6 +69,7 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 | `MCP_TOKEN` | Token do MCP anterior. Continua aceito e age como o admin. |
 | `BACKUP_DIR`, `BACKUP_KEEP` | Pasta e quantidade de backups (ver Backups). |
 | `DATABASE_URL` | Caminho do SQLite (padrão da imagem). |
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token do app do Slack (`xoxb-…`). Só na VPS. Sem ele o bot do Slack fica desligado. Não use com `NODE_ENV=production` fora da VPS: uma cópia do banco mandaria de novo as mensagens nos canais reais. |
 
 ### Verificação do domínio na Resend
 
@@ -78,6 +79,36 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 3. Crie uma API key com permissão de envio e use-a em `RESEND_API_KEY`.
 4. Reinicie o serviço após alterar as variáveis.
 
+## Bot do Slack
+
+O bot avisa todo dia útil, entre 9h e 12h (America/Sao_Paulo), no canal de cada
+projeto, as tarefas atrasadas e as que vencem.
+
+1. Em api.slack.com/apps, escolha **Create New App** → **From a manifest**, o
+   workspace da Axivero, e cole o manifesto:
+
+   ```yaml
+   display_information:
+     name: martrello
+     description: Avisa no canal do projeto as tarefas atrasadas e que vencem.
+   features:
+     bot_user:
+       display_name: martrello
+       always_online: false
+   oauth_config:
+     scopes:
+       bot: [chat:write, users:read, users:read.email, channels:read, groups:read]
+   settings:
+     org_deploy_enabled: false
+     socket_mode_enabled: false
+   ```
+
+2. Instale o app no workspace e copie o **Bot User OAuth Token**
+   (OAuth & Permissions) para `SLACK_BOT_TOKEN` no serviço.
+3. Faça o deploy (ou reinicie o serviço).
+4. Em cada canal, rode `/invite @martrello`.
+5. Em `/admin`, escolha o canal de cada projeto.
+
 ## Convites e senhas
 
 - Só o admin (`marcelo.ferro@axivero.com.br`) convida, em `/admin`. O convidado
@@ -86,7 +117,7 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 - "Esqueci minha senha" em `/esqueci-senha` envia um link de 1 hora e uso único
   (`/redefinir-senha/<token>`).
 - O e-mail de login de cada pessoa deve ser o mesmo e-mail Axivero que ela usa
-  no Slack (necessário para o bot do Slack, projeto seguinte).
+  no Slack (o bot do Slack usa o e-mail para marcar a pessoa).
 
 ## Creating / changing the login
 
