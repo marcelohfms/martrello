@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth/current-user';
 import { createInvite, resendInvite, cancelInvite, listPendingInvites } from '@/lib/auth/tokens';
 import { deactivateUser, reactivateUser } from '@/lib/auth/admin-users';
 import { addMember, removeMember } from '@/lib/core/members';
+import { setProjectSlackChannel } from '@/lib/core/projects';
 import { deliverInvite, inviteLink, inviteLinkPreflight, type InviteResult } from '@/lib/auth/invite-delivery';
 import { validateInviteInput } from '@/lib/auth/admin-input';
 import { toResult, type ActionResult } from '@/lib/action-result';
@@ -76,4 +77,11 @@ export async function addMemberAction(projectId: string, userId: string): Promis
 
 export async function removeMemberAction(projectId: string, userId: string): Promise<AdminResult> {
   return run((actor) => removeMember(getDb(), actor, projectId, userId));
+}
+
+export async function setSlackChannelAction(
+  projectId: string,
+  channel: { id: string; name: string } | null,
+): Promise<AdminResult> {
+  return run((actor) => setProjectSlackChannel(getDb(), actor, projectId, channel));
 }

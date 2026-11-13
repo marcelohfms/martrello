@@ -5,12 +5,21 @@ import { ProjectLabel } from '@/components/ProjectLabel';
 import { useProjectPrivacy } from '@/components/ProjectPrivacyContext';
 import type { ActionResult as AdminResult } from '@/lib/action-result';
 import { addMemberAction, removeMemberAction } from './actions';
+import { SlackChannelPicker } from './SlackChannelPicker';
+import type { SlackSetup } from './slack-channel';
 import { removeMemberConfirmMessage } from './remove-member-message';
 
 type Member = { id: string; name: string; email: string; disabled: boolean; isAdmin: boolean };
-type ProjectRow = { id: string; name: string; acronym: string; color: string; members: Member[] };
+type ProjectRow = {
+  id: string;
+  name: string;
+  acronym: string;
+  color: string;
+  members: Member[];
+  slack: { saved: { id: string; name: string } | null; status: string };
+};
 
-export function ProjectMembersSection({ projects, people }: { projects: ProjectRow[]; people: { id: string; name: string }[] }) {
+export function ProjectMembersSection({ projects, people, slackSetup }: { projects: ProjectRow[]; people: { id: string; name: string }[]; slackSetup: SlackSetup }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +90,17 @@ export function ProjectMembersSection({ projects, people }: { projects: ProjectR
                 </select>
               </div>
             )}
+            <div className="border-t border-mt-line px-3 py-2">
+              <SlackChannelPicker
+                projectId={p.id}
+                setup={slackSetup}
+                saved={p.slack.saved}
+                status={p.slack.status}
+                disabled={pending}
+                onResult={handle}
+                run={start}
+              />
+            </div>
           </div>
         );
       })}
