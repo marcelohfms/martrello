@@ -200,3 +200,18 @@ export async function reorderProjects(db: Db, actor: Actor, orderedIds: string[]
     }
   });
 }
+
+export async function setProjectSlackChannel(
+  db: Db,
+  actor: Actor,
+  projectId: string,
+  channel: { id: string; name: string } | null,
+): Promise<void> {
+  assertAdmin(actor);
+  const found = (await db.select().from(projects).where(eq(projects.id, projectId)))[0];
+  if (!found) throw new MartrelloError('PROJECT_NOT_FOUND', `Projeto ${projectId} não existe`);
+  await db
+    .update(projects)
+    .set({ slackChannelId: channel?.id ?? null, slackChannelName: channel?.name ?? null })
+    .where(eq(projects.id, projectId));
+}

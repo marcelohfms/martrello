@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { makeTestDb, type Db } from './test-helpers';
+import { makeTestDb, makeUser, type Db } from './test-helpers';
 import { SYSTEM_ACTOR } from '@/lib/access/actor';
-import { createProject, listProjects, updateProject, archiveProject, reorderProjects, getProjectByNameOrId, PROJECT_COLOR_PALETTE } from './projects';
+import { createProject, setProjectSlackChannel, listProjects, updateProject, archiveProject, reorderProjects, getProjectByNameOrId, PROJECT_COLOR_PALETTE } from './projects';
 import { MartrelloError } from '@/lib/errors';
 
 let db: Db;
@@ -143,6 +143,20 @@ describe('projects', () => {
     const a = await createProject(db, SYSTEM_ACTOR, { name: 'a', acronym: 'AAA' });
     const updated = await updateProject(db, SYSTEM_ACTOR, a.id, { acronym: '' });
     expect(updated.acronym).toBe('AAA');
+    close();
+  });
+
+  it('setProjectSlackChannel grava e limpa; membro recebe FORBIDDEN', async () => {
+    const p = await createProject(db, SYSTEM_ACTOR, { name: 'slack' });
+    await setProjectSlackChannel(db, SYSTEM_ACTOR, p.id, { id: 'C1', name: 'geral' });
+    let got = await getProjectByNameOrId(db, p.id);
+    expect([got.slackChannelId, got.slackChannelName]).toEqual(['C1', 'geral']);
+    await setProjectSlackChannel(db, SYSTEM_ACTOR, p.id, null);
+    got = await getProjectByNameOrId(db, p.id);
+    expect([got.slackChannelId, got.slackChannelName]).toEqual([null, null]);
+    const m = await makeUser(db);
+    await expect(setProjectSlackChannel(db, m.actor, p.id, { id: 'C1', name: 'geral' })).rejects.toThrow(/FORBIDDEN/);
+    await expect(setProjectSlackChannel(db, SYSTEM_ACTOR, 'nope', null)).rejects.toThrow(/PROJECT_NOT_FOUND/);
     close();
   });
 });

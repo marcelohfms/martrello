@@ -12,6 +12,8 @@ export const projects = sqliteTable('projects', {
   position: integer('position').notNull(),
   createdAt: integer('created_at').notNull(),
   archivedAt: integer('archived_at'),
+  slackChannelId: text('slack_channel_id'),
+  slackChannelName: text('slack_channel_name'),
 });
 
 export const lists = sqliteTable(
@@ -190,3 +192,21 @@ export type Sprint = typeof sprints.$inferSelect;
 export type Role = 'admin' | 'member';
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
+
+export type DeliveryStatus = 'sending' | 'sent' | 'empty' | 'retry' | 'failed';
+
+// One row per project per São Paulo day: guarantees at most one Slack message a day.
+export const slackDeliveries = sqliteTable(
+  'slack_deliveries',
+  {
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    day: text('day').notNull(), // YYYY-MM-DD, America/Sao_Paulo
+    status: text('status', { enum: ['sending', 'sent', 'empty', 'retry', 'failed'] }).notNull(),
+    attempts: integer('attempts').notNull(),
+    error: text('error'),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.projectId, t.day] }),
+  }),
+);

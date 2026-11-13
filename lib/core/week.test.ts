@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { weekStartISO, weekBounds, sprintName } from './week';
+import { weekStartISO, weekBounds, sprintName, saoPauloClock, addDaysISO, isoWeekday } from './week';
 
 describe('week', () => {
   it('a semana vira à meia-noite de segunda em São Paulo', () => {
@@ -23,5 +23,18 @@ describe('week', () => {
   it('sprintName usa dia/mês da segunda-feira', () => {
     expect(sprintName('2026-11-16')).toBe('Semana 16/11');
     expect(sprintName('2026-02-02')).toBe('Semana 02/02');
+  });
+
+  it('saoPauloClock usa a data e a hora de São Paulo', () => {
+    expect(saoPauloClock(new Date('2026-11-16T11:59:00Z'))).toEqual({ date: '2026-11-16', hour: 8 });
+    expect(saoPauloClock(new Date('2026-11-16T12:00:00Z'))).toEqual({ date: '2026-11-16', hour: 9 });
+    expect(saoPauloClock(new Date('2026-11-17T01:00:00Z'))).toEqual({ date: '2026-11-16', hour: 22 });
+  });
+
+  it('addDaysISO e isoWeekday', () => {
+    expect(addDaysISO('2026-12-31', 1)).toBe('2027-01-01');
+    expect(addDaysISO('2026-11-16', -3)).toBe('2026-11-13');
+    expect(isoWeekday('2026-11-16')).toBe(1);
+    expect(isoWeekday('2026-11-22')).toBe(7);
   });
 });

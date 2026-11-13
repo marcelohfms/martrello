@@ -4,17 +4,33 @@ import { listUsers } from '@/lib/auth/admin-users';
 import { listPendingInvites } from '@/lib/auth/tokens';
 import { listProjects } from '@/lib/core/projects';
 import { listMembers } from '@/lib/core/members';
+import { deliveryStatuses } from '@/lib/core/slack-deliveries';
+import { createSlackClient, SlackError } from '@/lib/slack/client';
+import { formatDeliveryStatus, type SlackSetup } from './slack-channel';
 import { PeopleSection } from './PeopleSection';
 import { ProjectMembersSection } from './ProjectMembersSection';
+
+async function loadSlackSetup(): Promise<SlackSetup> {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) return { state: 'off' };
+  try {
+    return { state: 'ok', channels: await createSlackClient(token, fetch, { timeoutMs: 3000 }).listBotChannels() };
+  } catch (e) {
+    return { state: 'error', message: e instanceof SlackError ? e.code : e instanceof Error ? e.message : String(e) };
+  }
+}
 
 export default async function AdminPage() {
   const { user, actor } = await requireAdmin();
   const db = getDb();
-  const [users, invites, projects] = await Promise.all([
+  const [users, invites, projects, slackSetup, statuses] = await Promise.all([
     listUsers(db, actor),
     listPendingInvites(db, actor),
     listProjects(db, actor),
+    loadSlackSetup(),
+    deliveryStatuses(db),
   ]);
+  const now = new Date();
   const adminIds = new Set(users.filter((u) => u.role === 'admin').map((u) => u.id));
   const projectRows = await Promise.all(
     projects.map(async (p) => ({
@@ -22,6 +38,10 @@ export default async function AdminPage() {
       name: p.name,
       acronym: p.acronym,
       color: p.color,
+      slack: {
+        saved: p.slackChannelId && p.slackChannelName ? { id: p.slackChannelId, name: p.slackChannelName } : null,
+        status: formatDeliveryStatus(statuses.get(p.id), now),
+      },
       members: (await listMembers(db, actor, p.id)).map((m) => ({ ...m, isAdmin: adminIds.has(m.id) })),
     })),
   );
@@ -40,6 +60,7 @@ export default async function AdminPage() {
           />
           <ProjectMembersSection
             projects={projectRows}
+            slackSetup={slackSetup}
             people={users.filter((u) => u.disabledAt === null).map((u) => ({ id: u.id, name: u.name }))}
           />
         </div>

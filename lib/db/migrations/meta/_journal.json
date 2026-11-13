@@ -57,6 +57,13 @@
       "when": 1794518959184,
       "tag": "0007_sprint_pessoal",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794589133552,
+      "tag": "0008_slack_bot",
+      "breakpoints": true
     }
   ]
 }
