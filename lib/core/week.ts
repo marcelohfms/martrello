@@ -57,3 +57,19 @@ export function sprintName(weekStart: string): string {
   const [, m, d] = weekStart.split('-');
   return `Semana ${d}/${m}`;
 }
+
+/** São Paulo's calendar date (`YYYY-MM-DD`) and hour (0–23) at `now`. */
+export function saoPauloClock(now: Date): { date: string; hour: number } {
+  const p = parts(clockFormat, now.getTime());
+  return { date: `${p.year}-${p.month}-${p.day}`, hour: +p.hour };
+}
+
+/** `iso` shifted by `n` calendar days (negative goes back). */
+export function addDaysISO(iso: string, n: number): string {
+  return isoOf(utcDay(iso) + n * DAY_MS);
+}
+
+/** ISO weekday of a `YYYY-MM-DD`: 1 = Monday … 7 = Sunday. */
+export function isoWeekday(iso: string): number {
+  return ((new Date(utcDay(iso)).getUTCDay() + 6) % 7) + 1;
+}
