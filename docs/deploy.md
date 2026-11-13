@@ -82,7 +82,7 @@ Every push to `main` runs the tests, builds `ghcr.io/marcelohfms/martrello`
 
 ## Bot do Slack
 
-O bot avisa todo dia útil, entre 9h e 12h (America/Sao_Paulo), no canal de cada
+O bot (Prumo) avisa todo dia útil, entre 9h e 12h (America/Sao_Paulo), no canal de cada
 projeto, as tarefas atrasadas e as que vencem.
 
 1. Em api.slack.com/apps, escolha **Create New App** → **From a manifest**, o
@@ -90,11 +90,11 @@ projeto, as tarefas atrasadas e as que vencem.
 
    ```yaml
    display_information:
-     name: martrello
+     name: Prumo
      description: Avisa no canal do projeto as tarefas atrasadas e que vencem.
    features:
      bot_user:
-       display_name: martrello
+       display_name: prumo
        always_online: false
    oauth_config:
      scopes:
@@ -108,7 +108,7 @@ projeto, as tarefas atrasadas e as que vencem.
    (OAuth & Permissions) para `SLACK_BOT_TOKEN` no serviço.
 3. Defina `SLACK_DIGEST_ENABLED=1` no serviço (só no Easypanel).
 4. Faça o deploy (ou reinicie o serviço).
-5. Em cada canal, rode `/invite @martrello`.
+5. Em cada canal, rode `/invite @prumo`.
 6. Em `/admin`, escolha o canal de cada projeto.
 
 ## Convites e senhas

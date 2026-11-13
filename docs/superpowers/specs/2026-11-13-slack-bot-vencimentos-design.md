@@ -150,7 +150,7 @@ Uma tarefa atrasada aparece todo dia até alguém mudar o prazo ou concluí-la.
   Slack" com a opção "Nenhum" e os canais (públicos e privados) em que o bot
   já é membro.
 - Se o canal desejado não aparece, falta convidar o bot com `/invite
-  @martrello` no Slack. A tela diz isso ao lado do seletor.
+  @prumo` no Slack. A tela diz isso ao lado do seletor.
 - Ao lado do seletor: último envio (data e hora) e, se houver, o último erro
   com a data.
 - Se o canal configurado não estiver mais na lista (bot removido, canal
@@ -166,6 +166,9 @@ Uma tarefa atrasada aparece todo dia até alguém mudar o prazo ou concluí-la.
 
 ## 7. App do Slack
 
+- O bot se chama **Prumo** (decisão do Marcelo): "estar no prumo" é estar
+  alinhado no eixo, que é o *Axis* de Axivero. O nome do produto pode mudar, e
+  o bot não leva o nome dele.
 - Um app interno no workspace da Axivero, criado pelo Marcelo, com bot token
   (`xoxb-…`) na variável `SLACK_BOT_TOKEN`.
 - Escopos do bot: `chat:write`, `users:read`, `users:read.email`,

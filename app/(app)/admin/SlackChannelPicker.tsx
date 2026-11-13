@@ -47,7 +47,7 @@ export function SlackChannelPicker({ projectId, setup, saved, status, disabled, 
           <option key={o.id} value={o.id}>{o.label}</option>
         ))}
       </select>
-      <p className="text-[12px] text-mt-muted">Não achou o canal? Convide o bot com /invite @martrello</p>
+      <p className="text-[12px] text-mt-muted">Não achou o canal? Convide o bot com /invite @prumo</p>
       <p className="text-[12px] text-mt-muted">{status}</p>
     </div>
   );
