@@ -141,6 +141,60 @@ describe('runDigestTick', () => {
     close();
   });
 
+  it('falha em um projeto não impede os outros no mesmo tick', async () => {
+    const { db, close } = makeTestDb();
+    const a = await projectWithChannel(db, 'alpha');
+    const b = await projectWithChannel(db, 'beta');
+    await createCard(db, SYSTEM_ACTOR, { project: a.id, title: 'ta', dueDate: '2026-11-01' });
+    await createCard(db, SYSTEM_ACTOR, { project: b.id, title: 'tb', dueDate: '2026-11-01' });
+    const posts: string[] = [];
+    const slack: SlackClient = {
+      async postMessage(channel) {
+        if (channel === 'C-alpha') throw new SlackError('not_in_channel', false);
+        posts.push(channel);
+      },
+      lookupUserIdByEmail: async () => null,
+      listBotChannels: async () => [],
+    };
+    const r = await runDigestTick(db, new Date('2026-11-16T12:00:00Z'), { slack, boardUrl, log });
+    expect(r).toEqual({ sent: 1, empty: 0, failed: 1, retry: 0 });
+    const byProject = Object.fromEntries(rows(db).map((x) => [x.projectId, x.status]));
+    expect(byProject).toEqual({ [a.id]: 'failed', [b.id]: 'sent' });
+    expect(posts).toEqual(['C-beta']);
+    close();
+  });
+
+  it('erro comum no envio vira failed com a mensagem', async () => {
+    const { db, close } = makeTestDb();
+    const p = await projectWithChannel(db, 'alpha');
+    await createCard(db, SYSTEM_ACTOR, { project: p.id, title: 't', dueDate: '2026-11-01' });
+    const { slack } = fakeSlack({ postErrors: [new Error('boom')] });
+    const r = await runDigestTick(db, new Date('2026-11-16T12:00:00Z'), { slack, boardUrl, log });
+    expect(r.failed).toBe(1);
+    expect(rows(db)[0]).toMatchObject({ status: 'failed', error: 'boom' });
+    close();
+  });
+
+  it('exceção de banco em um projeto é logada e o laço continua', async () => {
+    const { db, close } = makeTestDb();
+    const a = await projectWithChannel(db, 'alpha');
+    const b = await projectWithChannel(db, 'beta');
+    await createCard(db, SYSTEM_ACTOR, { project: a.id, title: 'ta', dueDate: '2026-11-01' });
+    await createCard(db, SYSTEM_ACTOR, { project: b.id, title: 'tb', dueDate: '2026-11-01' });
+    // Linha pré-existente 'sent' não derruba nada; forçamos a falha no 1º finishDelivery via trigger.
+    db.$client.exec(
+      `CREATE TRIGGER boom BEFORE UPDATE ON slack_deliveries WHEN NEW.status = 'sent' AND NEW.project_id = '${a.id}' BEGIN SELECT RAISE(ABORT, 'db-boom'); END`,
+    );
+    const { slack, posts } = fakeSlack();
+    const logs: string[] = [];
+    const r = await runDigestTick(db, new Date('2026-11-16T12:00:00Z'), { slack, boardUrl, log: (m) => logs.push(m) });
+    expect(r.sent).toBe(1);
+    expect(posts.map((p) => p.channel)).toEqual(['C-alpha', 'C-beta']);
+    expect(logs.some((l) => l.startsWith('[slack] alpha: erro inesperado (db-boom'))).toBe(true);
+    expect(rows(db).find((x) => x.projectId === a.id)?.status).toBe('sending');
+    close();
+  });
+
   it('sending antigo vira failed', async () => {
     const { db, close } = makeTestDb();
     const p = await projectWithChannel(db, 'alpha');

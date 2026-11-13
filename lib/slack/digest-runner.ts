@@ -43,7 +43,17 @@ export async function runDigestTick(
   };
 
   for (const target of await listDigestTargets(db)) {
-    if (!claimDelivery(db, target.id, date, ts)) continue;
+    try {
+      await runTarget(target);
+    } catch (e) {
+      // Falha de banco isolada: a linha fica em 'sending' e o próximo tick a marca como interrompida.
+      log(`[slack] ${target.name}: erro inesperado (${e instanceof Error ? e.message : String(e)})`);
+    }
+  }
+  return result;
+
+  async function runTarget(target: { id: string; name: string; channelId: string }): Promise<void> {
+    if (!claimDelivery(db, target.id, date, ts)) return;
     let status: 'sent' | 'empty' | 'retry' | 'failed';
     let code: string | null = null;
     try {
@@ -85,5 +95,4 @@ export async function runDigestTick(
     result[status]++;
     log(`[slack] ${target.name}: ${status}${code ? ` (${code})` : ''}`);
   }
-  return result;
 }
